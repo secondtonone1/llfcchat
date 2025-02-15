@@ -1,6 +1,52 @@
 <RCC>
     <qresource prefix="/">
-        <file>res/ice.png</file>
         <file>style/stylesheet.qss</file>
+        <file>res/unvisible.png</file>
+        <file>res/visible.png</file>
+        <file>res/unvisible_hover.png</file>
+        <file>res/visible_hover.png</file>
+        <file>res/add_friend_hover.png</file>
+        <file>res/add_friend_normal.png</file>
+        <file>res/search.png</file>
+        <file>res/close_search.png</file>
+        <file>res/close_transparent.png</file>
+        <file>res/head_1.jpg</file>
+        <file>res/head_2.jpg</file>
+        <file>res/head_3.jpg</file>
+        <file>res/head_4.jpg</file>
+        <file>res/head_5.jpg</file>
+        <file>res/ice.png</file>
+        <file>res/loading.gif</file>
+        <file>res/smile.png</file>
+        <file>res/smile_hover.png</file>
+        <file>res/smile_press.png</file>
+        <file>res/filedir.png</file>
+        <file>res/filedir_hover.png</file>
+        <file>res/filedir_press.png</file>
+        <file>res/chat_icon.png</file>
+        <file>res/chat_icon_hover.png</file>
+        <file>res/chat_icon_press.png</file>
+        <file>res/chat_icon_select_hover.png</file>
+        <file>res/chat_icon_select_press.png</file>
+        <file>res/contact_list.png</file>
+        <file>res/contact_list_hover.png</file>
+        <file>res/contact_list_press.png</file>
+        <file>res/addtip.png</file>
+        <file>res/right_tip.png</file>
+        <file>res/arowdown.png</file>
+        <file>res/tipclose.png</file>
+        <file>res/add_friend.png</file>
+        <file>res/red_point.png</file>
+        <file>res/female.png</file>
+        <file>res/male.png</file>
+        <file>res/msg_chat_hover.png</file>
+        <file>res/msg_chat_normal.png</file>
+        <file>res/msg_chat_press.png</file>
+        <file>res/video_chat_hover.png</file>
+        <file>res/video_chat_normal.png</file>
+        <file>res/video_chat_press.png</file>
+        <file>res/voice_chat_normal.png</file>
+        <file>res/voice_chat_hover.png</file>
+        <file>res/voice_chat_press.png</file>
     </qresource>
 </RCC>

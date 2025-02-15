@@ -12,6 +12,8 @@
 #include <memory>
 #include <mutex>
 #include <iostream>
+#include "global.h"
+
 using namespace std;
 template <typename T>
 class Singleton {

@@ -10,6 +10,6 @@ public:
 private:
 	tcp::acceptor  _acceptor;
 	net::io_context& _ioc;
-	boost::asio::ip::tcp::socket   _socket;
+	
 };
 

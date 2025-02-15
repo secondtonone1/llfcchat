@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     //创建一个CentralWidget, 并将其设置为MainWindow的中心部件
     _login_dlg = new LoginDialog(this);
-    _login_dlg->setWindowFlags(Qt::CustomizeWindowHint|Qt::FramelessWindowHint);
+
     setCentralWidget(_login_dlg);
 
     //连接登录界面注册信号
@@ -21,9 +21,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //连接创建聊天界面信号
     connect(TcpMgr::GetInstance().get(),&TcpMgr::sig_swich_chatdlg, this, &MainWindow::SlotSwitchChat);
 
-
     //测试用
     //emit TcpMgr::GetInstance()->sig_swich_chatdlg();
+
 }
 
 MainWindow::~MainWindow()

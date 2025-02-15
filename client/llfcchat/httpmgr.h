@@ -6,10 +6,7 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 #include "global.h"
-#include <memory>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QNetworkReply>
+
 
 class HttpMgr:public QObject, public Singleton<HttpMgr>,
         public std::enable_shared_from_this<HttpMgr>
@@ -29,6 +26,8 @@ signals:
     void sig_http_finish(ReqId id, QString res, ErrorCodes err, Modules mod);
     //注册模块http相关请求完成发送此信号
     void sig_reg_mod_finish(ReqId id, QString res, ErrorCodes err);
+    void sig_reset_mod_finish(ReqId id, QString res, ErrorCodes err);
+    void sig_login_mod_finish(ReqId id, QString res, ErrorCodes err);
 };
 
 #endif // HTTPMGR_H

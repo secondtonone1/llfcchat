@@ -1,0 +1,21 @@
+{
+    "email": {
+      "user": "secondtonone1@163.com",
+      "pass": "CRWTAZOSNCWDDQQT"
+    },
+
+    "mysql": {
+      "host": "81.68.86.146",
+      "port": 3308,
+      "passwd": "123456."
+    },
+
+    "redis":{
+      "host": "81.68.86.146",
+      "port": 6380,
+      "passwd": "123456"
+    }
+}
+
+
+  

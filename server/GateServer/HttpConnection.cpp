@@ -135,6 +135,8 @@ void HttpConnection::HandleReq() {
 	_response.version(_request.version());
 	//设置为短链接
 	_response.keep_alive(false);
+	// 允许所有来源访问（不安全的做法，实际应用中应限制来源）
+	_response.set(boost::beast::http::field::access_control_allow_origin, "*");
 	if (_request.method() == http::verb::get) {
 		PreParseGetParam();
 		bool success = LogicSystem::GetInstance()->HandleGet(_get_url, shared_from_this());

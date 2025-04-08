@@ -50,7 +50,10 @@ int main()
 			server->Shutdown();
 			});
 		auto port_str = cfg["SelfServer"]["Port"];
-		CServer s(io_context, atoi(port_str.c_str()));
+		//创建Cserver智能指针
+		auto pointer_server = std::make_shared<CServer>(io_context, atoi(port_str.c_str()));
+		//将Cserver注册给逻辑类方便以后清除连接
+		LogicSystem::GetInstance()->SetServer(pointer_server);
 		io_context.run();
 		RedisMgr::GetInstance()->HDel(LOGIN_COUNT, server_name);
 		RedisMgr::GetInstance()->Close();

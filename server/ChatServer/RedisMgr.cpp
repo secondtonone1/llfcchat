@@ -7,7 +7,7 @@ RedisMgr::RedisMgr() {
 	auto host = gCfgMgr["Redis"]["Host"];
 	auto port = gCfgMgr["Redis"]["Port"];
 	auto pwd = gCfgMgr["Redis"]["Passwd"];
-	_con_pool.reset(new RedisConPool(5, host.c_str(), atoi(port.c_str()), pwd.c_str()));
+	_con_pool.reset(new RedisConPool(10, host.c_str(), atoi(port.c_str()), pwd.c_str()));
 }
 
 RedisMgr::~RedisMgr() {

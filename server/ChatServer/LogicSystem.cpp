@@ -128,6 +128,56 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 
 	rtvalue["error"] = ErrorCodes::Success;
 
+
+	std::string base_key = USER_BASE_INFO + uid_str;
+	auto user_info = std::make_shared<UserInfo>();
+	bool b_base = GetBaseInfo(base_key, uid, user_info);
+	if (!b_base) {
+		rtvalue["error"] = ErrorCodes::UidInvalid;
+		return;
+	}
+	rtvalue["uid"] = uid;
+	rtvalue["pwd"] = user_info->pwd;
+	rtvalue["name"] = user_info->name;
+	rtvalue["email"] = user_info->email;
+	rtvalue["nick"] = user_info->nick;
+	rtvalue["desc"] = user_info->desc;
+	rtvalue["sex"] = user_info->sex;
+	rtvalue["icon"] = user_info->icon;
+
+	//从数据库获取申请列表
+	std::vector<std::shared_ptr<ApplyInfo>> apply_list;
+	auto b_apply = GetFriendApplyInfo(uid, apply_list);
+	if (b_apply) {
+		for (auto& apply : apply_list) {
+			Json::Value obj;
+			obj["name"] = apply->_name;
+			obj["uid"] = apply->_uid;
+			obj["icon"] = apply->_icon;
+			obj["nick"] = apply->_nick;
+			obj["sex"] = apply->_sex;
+			obj["desc"] = apply->_desc;
+			obj["status"] = apply->_status;
+			rtvalue["apply_list"].append(obj);
+		}
+	}
+
+	//获取好友列表
+	std::vector<std::shared_ptr<UserInfo>> friend_list;
+	bool b_friend_list = GetFriendList(uid, friend_list);
+	for (auto& friend_ele : friend_list) {
+		Json::Value obj;
+		obj["name"] = friend_ele->name;
+		obj["uid"] = friend_ele->uid;
+		obj["icon"] = friend_ele->icon;
+		obj["nick"] = friend_ele->nick;
+		obj["sex"] = friend_ele->sex;
+		obj["desc"] = friend_ele->desc;
+		obj["back"] = friend_ele->back;
+		rtvalue["friend_list"].append(obj);
+	}
+
+
 	//此处添加分布式锁，让该线程独占登录
 	//拼接用户ip对应的key
 	auto lock_key = LOCK_PREFIX + uid_str;
@@ -164,54 +214,6 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 		}
 	}
 
-
-	std::string base_key = USER_BASE_INFO + uid_str;
-	auto user_info = std::make_shared<UserInfo>();
-	bool b_base = GetBaseInfo(base_key, uid, user_info);
-	if (!b_base) {
-		rtvalue["error"] = ErrorCodes::UidInvalid;
-		return;
-	}
-	rtvalue["uid"] = uid;
-	rtvalue["pwd"] = user_info->pwd;
-	rtvalue["name"] = user_info->name;
-	rtvalue["email"] = user_info->email;
-	rtvalue["nick"] = user_info->nick;
-	rtvalue["desc"] = user_info->desc;
-	rtvalue["sex"] = user_info->sex;
-	rtvalue["icon"] = user_info->icon;
-
-	//从数据库获取申请列表
-	std::vector<std::shared_ptr<ApplyInfo>> apply_list;
-	auto b_apply = GetFriendApplyInfo(uid,apply_list);
-	if (b_apply) {
-		for (auto & apply : apply_list) {
-			Json::Value obj;
-			obj["name"] = apply->_name;
-			obj["uid"] = apply->_uid;
-			obj["icon"] = apply->_icon;
-			obj["nick"] = apply->_nick;
-			obj["sex"] = apply->_sex;
-			obj["desc"] = apply->_desc;
-			obj["status"] = apply->_status;
-			rtvalue["apply_list"].append(obj);
-		}
-	}
-
-	//获取好友列表
-	std::vector<std::shared_ptr<UserInfo>> friend_list;
-	bool b_friend_list = GetFriendList(uid, friend_list);
-	for (auto& friend_ele : friend_list) {
-		Json::Value obj;
-		obj["name"] = friend_ele->name;
-		obj["uid"] = friend_ele->uid;
-		obj["icon"] = friend_ele->icon;
-		obj["nick"] = friend_ele->nick;
-		obj["sex"] = friend_ele->sex;
-		obj["desc"] = friend_ele->desc;
-		obj["back"] = friend_ele->back;
-		rtvalue["friend_list"].append(obj);
-	}
 
 	auto server_name = ConfigMgr::Inst().GetValue("SelfServer", "Name");
 	//将登录数量增加

@@ -31,6 +31,9 @@ using message::TextChatMsgReq;
 using message::TextChatMsgRsp;
 using message::TextChatData;
 
+using message::KickUserReq;
+using message::KickUserRsp;
+
 
 class ChatConPool {
 public:
@@ -106,6 +109,7 @@ public:
 	AuthFriendRsp NotifyAuthFriend(std::string server_ip, const AuthFriendReq& req);
 	bool GetBaseInfo(std::string base_key, int uid, std::shared_ptr<UserInfo>& userinfo);
 	TextChatMsgRsp NotifyTextChatMsg(std::string server_ip, const TextChatMsgReq& req, const Json::Value& rtvalue);
+	KickUserRsp NotifyKickUser(std::string server_ip, const KickUserReq& req);
 private:
 	ChatGrpcClient();
 	unordered_map<std::string, std::unique_ptr<ChatConPool>> _pools;	

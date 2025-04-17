@@ -5,10 +5,12 @@
 #include "RedisMgr.h"
 #include "UserMgr.h"
 #include "ChatGrpcClient.h"
-
+#include "DistLock.h"
+#include <string>
+#include "CServer.h"
 using namespace std;
 
-LogicSystem::LogicSystem():_b_stop(false){
+LogicSystem::LogicSystem():_b_stop(false), _p_server(nullptr){
 	RegisterCallBacks();
 	_worker_thread = std::thread (&LogicSystem::DealMsg, this);
 }
@@ -28,6 +30,12 @@ void LogicSystem::PostMsgToQue(shared_ptr < LogicNode> msg) {
 		_consume.notify_one();
 	}
 }
+
+
+void LogicSystem::SetServer(std::shared_ptr<CServer> pserver) {
+	_p_server = pserver;
+}
+
 
 void LogicSystem::DealMsg() {
 	for (;;) {
@@ -102,6 +110,7 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 		session->Send(return_str, MSG_CHAT_LOGIN_RSP);
 		});
 
+
 	//从redis获取用户token是否正确
 	std::string uid_str = std::to_string(uid);
 	std::string token_key = USERTOKENPREFIX + uid_str;
@@ -118,6 +127,7 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 	}
 
 	rtvalue["error"] = ErrorCodes::Success;
+
 
 	std::string base_key = USER_BASE_INFO + uid_str;
 	auto user_info = std::make_shared<UserInfo>();
@@ -137,9 +147,9 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 
 	//从数据库获取申请列表
 	std::vector<std::shared_ptr<ApplyInfo>> apply_list;
-	auto b_apply = GetFriendApplyInfo(uid,apply_list);
+	auto b_apply = GetFriendApplyInfo(uid, apply_list);
 	if (b_apply) {
-		for (auto & apply : apply_list) {
+		for (auto& apply : apply_list) {
 			Json::Value obj;
 			obj["name"] = apply->_name;
 			obj["uid"] = apply->_uid;
@@ -168,24 +178,60 @@ void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id
 	}
 
 	auto server_name = ConfigMgr::Inst().GetValue("SelfServer", "Name");
-	//将登录数量增加
-	auto rd_res = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, server_name);
-	int count = 0;
-	if (!rd_res.empty()) {
-		count = std::stoi(rd_res);
+	{
+		//此处添加分布式锁，让该线程独占登录
+		//拼接用户ip对应的key
+		auto lock_key = LOCK_PREFIX + uid_str;
+		auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
+		//利用defer解锁
+		Defer defer2([this, identifier, lock_key]() {
+			RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
+			});
+		//此处判断该用户是否在别处或者本服务器登录
+
+		std::string uid_ip_value = "";
+		auto uid_ip_key = USERIPPREFIX + uid_str;
+		bool b_ip = RedisMgr::GetInstance()->Get(uid_ip_key, uid_ip_value);
+		//说明用户已经登录了，此处应该踢掉之前的用户登录状态
+		if (b_ip) {
+			//获取当前服务器ip信息
+			auto& cfg = ConfigMgr::Inst();
+			auto self_name = cfg["SelfServer"]["Name"];
+			//如果之前登录的服务器和当前相同，则直接在本服务器踢掉
+			if (uid_ip_value == self_name) {
+				//查找旧有的连接
+				auto old_session = UserMgr::GetInstance()->GetSession(uid);
+
+				//此处应该发送踢人消息
+				if (old_session) {
+					old_session->NotifyOffline(uid);
+					//清除旧的连接
+					_p_server->ClearSession(old_session->GetSessionId());
+				}
+
+			}
+			else {
+				//如果不是本服务器，则通知grpc通知其他服务器踢掉
+				//发送通知
+				KickUserReq kick_req;
+				kick_req.set_uid(uid);
+				ChatGrpcClient::GetInstance()->NotifyKickUser(uid_ip_value, kick_req);
+			}
+		}
+
+		//session绑定用户uid
+		session->SetUserId(uid);
+		//为用户设置登录ip server的名字
+		std::string  ipkey = USERIPPREFIX + uid_str;
+		RedisMgr::GetInstance()->Set(ipkey, server_name);
+		//uid和session绑定管理,方便以后踢人操作
+		UserMgr::GetInstance()->SetUserSession(uid, session);
+		std::string  uid_session_key = USER_SESSION_PREFIX + uid_str;
+		RedisMgr::GetInstance()->Set(uid_session_key, session->GetSessionId());
+
 	}
 
-	count++;
-	auto count_str = std::to_string(count);
-	RedisMgr::GetInstance()->HSet(LOGIN_COUNT, server_name, count_str);
-	//session绑定用户uid
-	session->SetUserId(uid);
-	//为用户设置登录ip server的名字
-	std::string  ipkey = USERIPPREFIX + uid_str;
-	RedisMgr::GetInstance()->Set(ipkey, server_name);
-	//uid和session绑定管理,方便以后踢人操作
-	UserMgr::GetInstance()->SetUserSession(uid, session);
-
+	RedisMgr::GetInstance()->IncreaseCount(server_name);
 	return;
 }
 
@@ -248,6 +294,12 @@ void LogicSystem::AddFriendApply(std::shared_ptr<CSession> session, const short&
 
 	auto& cfg = ConfigMgr::Inst();
 	auto self_name = cfg["SelfServer"]["Name"];
+
+
+	std::string base_key = USER_BASE_INFO + std::to_string(uid);
+	auto apply_info = std::make_shared<UserInfo>();
+	bool b_info = GetBaseInfo(base_key, uid, apply_info);
+
 	//直接通知对方有申请消息
 	if (to_ip_value == self_name) {
 		auto session = UserMgr::GetInstance()->GetSession(touid);
@@ -258,6 +310,11 @@ void LogicSystem::AddFriendApply(std::shared_ptr<CSession> session, const short&
 			notify["applyuid"] = uid;
 			notify["name"] = applyname;
 			notify["desc"] = "";
+			if (b_info) {
+				notify["icon"] = apply_info->icon;
+				notify["sex"] = apply_info->sex;
+				notify["nick"] = apply_info->nick;
+			}
 			std::string return_str = notify.toStyledString();
 			session->Send(return_str, ID_NOTIFY_ADD_FRIEND_REQ);
 		}
@@ -265,11 +322,7 @@ void LogicSystem::AddFriendApply(std::shared_ptr<CSession> session, const short&
 		return ;
 	}
 
-	std::string base_key = USER_BASE_INFO + std::to_string(uid);
-	auto apply_info = std::make_shared<UserInfo>();
-	bool b_info = GetBaseInfo(base_key, uid, apply_info);
 	
-
 	AddFriendReq add_req;
 	add_req.set_applyuid(uid);
 	add_req.set_touid(touid);
@@ -629,6 +682,7 @@ bool LogicSystem::GetBaseInfo(std::string base_key, int uid, std::shared_ptr<Use
 		RedisMgr::GetInstance()->Set(base_key, redis_root.toStyledString());
 	}
 
+	return true;
 }
 
 bool LogicSystem::GetFriendApplyInfo(int to_uid, std::vector<std::shared_ptr<ApplyInfo>> &list) {

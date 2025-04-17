@@ -12,6 +12,8 @@ public:
 	CServer(boost::asio::io_context& io_context, short port);
 	~CServer();
 	void ClearSession(std::string);
+	//根据uid获取session
+	shared_ptr<CSession> GetSession(std::string);
 private:
 	void HandleAccept(shared_ptr<CSession>, const boost::system::error_code & error);
 	void StartAccept();

@@ -7,6 +7,7 @@
 #include <json/reader.h>
 #include "LogicSystem.h"
 #include "RedisMgr.h"
+#include "ConfigMgr.h"
 
 CSession::CSession(boost::asio::io_context& io_context, CServer* server):
 	_socket(io_context), _server(server), _b_close(false),_b_head_parse(false), _user_uid(0){
@@ -16,6 +17,10 @@ CSession::CSession(boost::asio::io_context& io_context, CServer* server):
 }
 CSession::~CSession() {
 	std::cout << "~CSession destruct" << endl;
+	//此处减少服务器登录数量
+	auto& cfg = ConfigMgr::Inst();
+	auto self_name = cfg["SelfServer"]["Name"];
+	RedisMgr::GetInstance()->DecreaseCount(self_name);
 }
 
 tcp::socket& CSession::GetSocket() {

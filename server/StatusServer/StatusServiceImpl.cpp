@@ -57,36 +57,42 @@ StatusServiceImpl::StatusServiceImpl()
 ChatServer StatusServiceImpl::getChatServer() {
 	std::lock_guard<std::mutex> guard(_server_mtx);
 	auto minServer = _servers.begin()->second;
-	//暂时注释，测试单服务器模式
-	//auto count_str = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, minServer.name);
-	//if (count_str.empty()) {
-	//	//不存在则默认设置为最大
-	//	minServer.con_count = INT_MAX;
-	//}
-	//else {
-	//	minServer.con_count = std::stoi(count_str);
-	//}
+	auto lock_key = LOCK_COUNT;
+	auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
+	//利用defer解锁
+	Defer defer2([this, identifier, lock_key]() {
+		RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
+		});
+
+	auto count_str = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, minServer.name);
+	if (count_str.empty()) {
+		//不存在则默认设置为最大
+		minServer.con_count = INT_MAX;
+	}
+	else {
+		minServer.con_count = std::stoi(count_str);
+	}
 
 
-	//// 使用范围基于for循环
-	//for ( auto& server : _servers) {
-	//	
-	//	if (server.second.name == minServer.name) {
-	//		continue;
-	//	}
+	// 使用范围基于for循环
+	for ( auto& server : _servers) {
+		
+		if (server.second.name == minServer.name) {
+			continue;
+		}
 
-	//	auto count_str = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, server.second.name);
-	//	if (count_str.empty()) {
-	//		server.second.con_count = INT_MAX;
-	//	}
-	//	else {
-	//		server.second.con_count = std::stoi(count_str);
-	//	}
+		auto count_str = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, server.second.name);
+		if (count_str.empty()) {
+			server.second.con_count = INT_MAX;
+		}
+		else {
+			server.second.con_count = std::stoi(count_str);
+		}
 
-	//	if (server.second.con_count < minServer.con_count) {
-	//		minServer = server.second;
-	//	}
-	//}
+		if (server.second.con_count < minServer.con_count) {
+			minServer = server.second;
+		}
+	}
 
 	return minServer;
 }

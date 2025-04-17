@@ -10,6 +10,7 @@
 #include "ConfigMgr.h"
 #include "RedisMgr.h"
 #include "ChatServiceImpl.h"
+#include "const.h"
 
 using namespace std;
 bool bstop = false;
@@ -23,7 +24,17 @@ int main()
 	try {
 		auto pool = AsioIOServicePool::GetInstance();
 		//将登录数设置为0
-		RedisMgr::GetInstance()->HSet(LOGIN_COUNT, server_name,"0");
+		RedisMgr::GetInstance()->InitCount(server_name);
+		Defer derfer ([server_name]() {
+				RedisMgr::GetInstance()->HDel(LOGIN_COUNT, server_name);
+				RedisMgr::GetInstance()->Close();
+			});
+
+		boost::asio::io_context  io_context;
+		auto port_str = cfg["SelfServer"]["Port"];
+		//创建Cserver智能指针
+		auto pointer_server = std::make_shared<CServer>(io_context, atoi(port_str.c_str()));
+
 
 		//定义一个GrpcServer
 
@@ -33,6 +44,7 @@ int main()
 		// 监听端口和添加服务
 		builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 		builder.RegisterService(&service);
+		service.RegisterServer(pointer_server);
 		// 构建并启动gRPC服务器
 		std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
 		std::cout << "RPC Server listening on " << server_address << std::endl;
@@ -42,27 +54,23 @@ int main()
 				server->Wait();
 			});
 
-		boost::asio::io_context  io_context;
+	
 		boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
 		signals.async_wait([&io_context, pool, &server](auto, auto) {
 			io_context.stop();
 			pool->Stop();
 			server->Shutdown();
 			});
-		auto port_str = cfg["SelfServer"]["Port"];
-		//创建Cserver智能指针
-		auto pointer_server = std::make_shared<CServer>(io_context, atoi(port_str.c_str()));
+		
+	
 		//将Cserver注册给逻辑类方便以后清除连接
 		LogicSystem::GetInstance()->SetServer(pointer_server);
 		io_context.run();
-		RedisMgr::GetInstance()->HDel(LOGIN_COUNT, server_name);
-		RedisMgr::GetInstance()->Close();
+
 		grpc_server_thread.join();
 	}
 	catch (std::exception& e) {
 		std::cerr << "Exception: " << e.what() << endl;
-		RedisMgr::GetInstance()->HDel(LOGIN_COUNT, server_name);
-		RedisMgr::GetInstance()->Close();
 	}
 
 }

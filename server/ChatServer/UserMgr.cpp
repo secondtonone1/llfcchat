@@ -29,7 +29,7 @@ void UserMgr::RmvUserSession(int uid, std::string session_id)
 	{
 		std::lock_guard<std::mutex> lock(_session_mtx);
 		auto iter = _uid_to_session.find(uid);
-		if (iter != _uid_to_session.end()) {
+		if (iter == _uid_to_session.end()) {
 			return;
 		}
 	

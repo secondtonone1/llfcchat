@@ -143,6 +143,7 @@
     <ClCompile Include="AsioIOServicePool.cpp" />
     <ClCompile Include="ChatGrpcClient.cpp" />
     <ClCompile Include="ConfigMgr.cpp" />
+    <ClCompile Include="DistLock.cpp" />
     <ClCompile Include="message.grpc.pb.cc" />
     <ClCompile Include="message.pb.cc" />
     <ClCompile Include="MysqlDao.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="ChatGrpcClient.h" />
     <ClInclude Include="ConfigMgr.h" />
     <ClInclude Include="const.h" />
+    <ClInclude Include="DistLock.h" />
     <ClInclude Include="message.grpc.pb.h" />
     <ClInclude Include="message.pb.h" />
     <ClInclude Include="MysqlDao.h" />

@@ -33,6 +33,7 @@ public slots:
     void SlotSwitchLogin2();
     void SlotSwitchChat();
     void SlotOffline();
+    void SlotExcepConOffline();
 
 private:
     void offlineLogin();

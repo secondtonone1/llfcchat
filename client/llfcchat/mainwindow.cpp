@@ -22,9 +22,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(_login_dlg, &LoginDialog::switchReset, this, &MainWindow::SlotSwitchReset);
     //连接创建聊天界面信号
     connect(TcpMgr::GetInstance().get(),&TcpMgr::sig_swich_chatdlg, this, &MainWindow::SlotSwitchChat);
-    //链接离线消息
+    //链接服务器踢人消息
     connect(TcpMgr::GetInstance().get(),&TcpMgr::sig_notify_offline, this, &MainWindow::SlotOffline);
-
+    //连接服务器断开心跳超时或异常连接信息
+    connect(TcpMgr::GetInstance().get(),&TcpMgr::sig_connection_closed, this, &MainWindow::SlotExcepConOffline);
     //测试用
     //emit TcpMgr::GetInstance()->sig_swich_chatdlg();
 
@@ -111,6 +112,15 @@ void MainWindow::SlotOffline(){
         TcpMgr::GetInstance()->CloseConnection();
         offlineLogin();
 }
+
+void MainWindow::SlotExcepConOffline()
+{
+    // 使用静态方法直接弹出一个信息框
+        QMessageBox::information(this, "下线提示", "心跳超时或临界异常，该终端下线！");
+        TcpMgr::GetInstance()->CloseConnection();
+        offlineLogin();
+}
+
 
 void MainWindow::offlineLogin(){
     //创建一个CentralWidget, 并将其设置为MainWindow的中心部件

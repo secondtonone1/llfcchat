@@ -5,9 +5,13 @@
 #include "RedisMgr.h"
 
 CServer::CServer(boost::asio::io_context& io_context, short port):_io_context(io_context), _port(port),
-_acceptor(io_context, tcp::endpoint(tcp::v4(),port))
+_acceptor(io_context, tcp::endpoint(tcp::v4(),port)), _timer(_io_context, std::chrono::seconds(60))
 {
 	cout << "Server start success, listen on port : " << _port << endl;
+	//启动定时器
+	_timer.async_wait([this](boost::system::error_code ec) {
+			on_timer(ec);
+		});
 	StartAccept();
 }
 
@@ -51,9 +55,50 @@ void CServer::ClearSession(std::string session_id) {
 
 //根据用户获取session
 shared_ptr<CSession> CServer::GetSession(std::string uuid) {
+	lock_guard<mutex> lock(_mutex);
 	auto it = _sessions.find(uuid);
 	if (it != _sessions.end()) {
 		return it->second;
 	}
 	return nullptr;
+}
+
+bool CServer::CheckValid(std::string uuid)
+{
+	lock_guard<mutex> lock(_mutex);
+	auto it = _sessions.find(uuid);
+	if (it != _sessions.end()) {
+		return true;
+	}
+	return false;
+}
+
+void CServer::on_timer(const boost::system::error_code& ec) {
+	std::vector<std::shared_ptr<CSession>> _expired_sessions;
+	//此处加锁遍历session
+	{
+		lock_guard<mutex> lock(_mutex);
+		time_t now = std::time(nullptr);
+		for (auto iter = _sessions.begin(); iter != _sessions.end(); ) {
+			auto b_expired = iter->second->IsHeartbeatExpired(now);
+			if (b_expired) {
+				//关闭socket
+				iter->second->Close();
+				//收集过期信息
+				_expired_sessions.push_back(iter->second);
+				continue;
+			}
+		}
+	}
+
+	//处理过期session, 单独提出，防止死锁
+	for (auto &session : _expired_sessions) {
+		session->DealExceptionSession();
+	}
+	
+	//再次设置，下一个60s检测
+	_timer.expires_after(std::chrono::seconds(60));
+	_timer.async_wait([this](boost::system::error_code ec) {
+		on_timer(ec);
+	});
 }

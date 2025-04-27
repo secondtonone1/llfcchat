@@ -134,10 +134,17 @@ void CSession::AsyncReadBody(int total_len)
 				return;
 			}
 
+			//判断连接无效
+			if (!_server->CheckValid(_session_id)) {
+				Close();
+				return;
+			}
+
 			memcpy(_recv_msg_node->_data , _data , bytes_transfered);
 			_recv_msg_node->_cur_len += bytes_transfered;
 			_recv_msg_node->_data[_recv_msg_node->_total_len] = '\0';
 			cout << "receive data is " << _recv_msg_node->_data << endl;
+			
 			//此处将消息投递到逻辑队列中
 			LogicSystem::GetInstance()->PostMsgToQue(make_shared<LogicNode>(shared_from_this(), _recv_msg_node));
 			//继续监听头部接受事件
@@ -196,6 +203,12 @@ void CSession::AsyncReadHead(int total_len)
 					<< HEAD_TOTAL_LEN << "]" << endl;
 				Close();
 				_server->ClearSession(_session_id);
+				return;
+			}
+
+			//判断连接无效
+			if (!_server->CheckValid(_session_id)) {
+				Close();
 				return;
 			}
 

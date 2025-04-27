@@ -14,6 +14,7 @@ CSession::CSession(boost::asio::io_context& io_context, CServer* server):
 	boost::uuids::uuid  a_uuid = boost::uuids::random_generator()();
 	_session_id = boost::uuids::to_string(a_uuid);
 	_recv_head_node = make_shared<MsgNode>(HEAD_TOTAL_LEN);
+	_last_heartbeat = std::time(nullptr);
 }
 CSession::~CSession() {
 	std::cout << "~CSession destruct" << endl;
@@ -80,6 +81,7 @@ void CSession::Send(char* msg, short max_length, short msgid) {
 }
 
 void CSession::Close() {
+	std::lock_guard<std::mutex> lock(_session_mtx);
 	_socket.close();
 	_b_close = true;
 }
@@ -96,33 +98,7 @@ void CSession::AsyncReadBody(int total_len)
 			if (ec) {
 				std::cout << "handle read failed, error is " << ec.what() << endl;
 				Close();
-
-				//加锁清除session
-				auto uid_str = std::to_string(_user_uid);
-				auto lock_key = LOCK_PREFIX + uid_str;
-				auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
-				Defer defer([identifier, lock_key,self,this]() {
-					_server->ClearSession(_session_id);
-					RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
-					});
-
-				if (identifier.empty()) {
-					return;
-				}	
-				std::string redis_session_id = "";
-				auto bsuccess = RedisMgr::GetInstance()->Get(USER_SESSION_PREFIX + uid_str, redis_session_id);
-				if (!bsuccess) {
-					return;
-				}
-
-				if (redis_session_id != _session_id) {
-					//说明有客户在其他服务器异地登录了
-					return;
-				}
-
-				RedisMgr::GetInstance()->Del(USER_SESSION_PREFIX + uid_str);
-				//清除用户登录信息
-				RedisMgr::GetInstance()->Del(USERIPPREFIX + uid_str);
+				DealExceptionSession();
 				return;
 			}
 
@@ -134,10 +110,18 @@ void CSession::AsyncReadBody(int total_len)
 				return;
 			}
 
+			//判断连接无效
+			if (!_server->CheckValid(_session_id)) {
+				Close();
+				return;
+			}
+
 			memcpy(_recv_msg_node->_data , _data , bytes_transfered);
 			_recv_msg_node->_cur_len += bytes_transfered;
 			_recv_msg_node->_data[_recv_msg_node->_total_len] = '\0';
 			cout << "receive data is " << _recv_msg_node->_data << endl;
+			//更新session心跳时间
+			UpdateHeartbeat();
 			//此处将消息投递到逻辑队列中
 			LogicSystem::GetInstance()->PostMsgToQue(make_shared<LogicNode>(shared_from_this(), _recv_msg_node));
 			//继续监听头部接受事件
@@ -157,37 +141,7 @@ void CSession::AsyncReadHead(int total_len)
 			if (ec) {
 				std::cout << "handle read failed, error is " << ec.what() << endl;
 				Close();
-
-				//加锁清除session
-				auto uid_str = std::to_string(_user_uid);
-				auto lock_key = LOCK_PREFIX + uid_str;
-				auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key,LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
-				Defer defer([identifier, lock_key, self,this]() {	
-					_server->ClearSession(_session_id);
-					RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
-					});
-				if (identifier.empty()) {
-					//如果加锁失败就交给其他线程处理
-					return;
-				}
-
-				//判断如果uid对应的session和自己的session相同则删除
-				std::string redis_session_id = "";
-				auto success = RedisMgr::GetInstance()->Get(USER_SESSION_PREFIX + uid_str, redis_session_id);
-				if (!success) {
-					//如果session_id不存在就返回
-					return;
-				}
-
-				//redis_session_id和当前session不相同就直接返回
-				if (redis_session_id != _session_id) {
-					return;
-				}
-
-				//和自己的session相同，说明没有其他人登录替换，那就安心删除session_id
-				RedisMgr::GetInstance()->Del(USER_SESSION_PREFIX + uid_str);
-				//清除用户登录信息
-				RedisMgr::GetInstance()->Del(USERIPPREFIX + uid_str);
+				DealExceptionSession();
 				return;
 			}
 
@@ -196,6 +150,12 @@ void CSession::AsyncReadHead(int total_len)
 					<< HEAD_TOTAL_LEN << "]" << endl;
 				Close();
 				_server->ClearSession(_session_id);
+				return;
+			}
+
+			//判断连接无效
+			if (!_server->CheckValid(_session_id)) {
+				Close();
 				return;
 			}
 
@@ -253,31 +213,7 @@ void CSession::HandleWrite(const boost::system::error_code& error, std::shared_p
 		else {
 			std::cout << "handle write failed, error is " << error.what() << endl;
 			Close();
-	
-			auto uid_str = std::to_string(_user_uid);
-			auto lock_key = LOCK_PREFIX + uid_str;
-			auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
-			Defer defer([identifier, lock_key, self,this]() {
-				//加锁清除session			
-				_server->ClearSession(_session_id);
-				RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
-				});
-
-			if (identifier.empty()) {
-				return;
-			}
-			std::string redis_session_id = "";
-			bool success = RedisMgr::GetInstance()->Get(USER_SESSION_PREFIX + uid_str, redis_session_id);
-			if (!success) {
-				return;
-			}
-			
-			if(redis_session_id != _session_id) {
-				return;
-			}
-
-			RedisMgr::GetInstance()->Del(USER_SESSION_PREFIX + uid_str);
-			RedisMgr::GetInstance()->Del(USERIPPREFIX + uid_str);
+			DealExceptionSession();
 		}
 	}
 	catch (std::exception& e) {
@@ -335,4 +271,51 @@ LogicNode::LogicNode(shared_ptr<CSession>  session,
 	
 }
 
+
+bool CSession::IsHeartbeatExpired(std::time_t& now) {
+	double diff_sec = std::difftime(now, _last_heartbeat);
+	if (diff_sec > 10 * 60) {
+		std::cout << "heartbeat expired, session id is  " << _session_id << endl;
+		return true;
+	}
+
+	return false;
+}
+
+void CSession::UpdateHeartbeat()
+{
+	time_t now = std::time(nullptr);
+	_last_heartbeat = now;
+}
+
+void CSession::DealExceptionSession()
+{
+	auto self = shared_from_this();
+	//加锁清除session
+	auto uid_str = std::to_string(_user_uid);
+	auto lock_key = LOCK_PREFIX + uid_str;
+	auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
+	Defer defer([identifier, lock_key, self, this]() {
+		_server->ClearSession(_session_id);
+		RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
+		});
+
+	if (identifier.empty()) {
+		return;
+	}
+	std::string redis_session_id = "";
+	auto bsuccess = RedisMgr::GetInstance()->Get(USER_SESSION_PREFIX + uid_str, redis_session_id);
+	if (!bsuccess) {
+		return;
+	}
+
+	if (redis_session_id != _session_id) {
+		//说明有客户在其他服务器异地登录了
+		return;
+	}
+
+	RedisMgr::GetInstance()->Del(USER_SESSION_PREFIX + uid_str);
+	//清除用户登录信息
+	RedisMgr::GetInstance()->Del(USERIPPREFIX + uid_str);
+}
 

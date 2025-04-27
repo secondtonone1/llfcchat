@@ -14,6 +14,7 @@ public:
 	void ClearSession(std::string);
 	//根据uid获取session
 	shared_ptr<CSession> GetSession(std::string);
+	bool CheckValid(std::string);
 private:
 	void HandleAccept(shared_ptr<CSession>, const boost::system::error_code & error);
 	void StartAccept();

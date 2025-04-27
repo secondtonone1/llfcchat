@@ -57,3 +57,12 @@ shared_ptr<CSession> CServer::GetSession(std::string uuid) {
 	}
 	return nullptr;
 }
+
+bool CServer::CheckValid(std::string uuid)
+{
+	auto it = _sessions.find(uuid);
+	if (it != _sessions.end()) {
+		return true;
+	}
+	return false;
+}

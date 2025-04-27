@@ -422,7 +422,7 @@ void RedisMgr::DecreaseCount(std::string server_name)
 		RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
 		});
 
-	//将登录数量增加
+	//将登录数量减少
 	auto rd_res = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, server_name);
 	int count = 0;
 	if (!rd_res.empty()) {

@@ -29,3 +29,7 @@ config.json
 /client/llfcchat/ui_registerdialog.h
 /client/llfcchat/ui_resetdialog.h
 ui_*.h
+/server/VarifyServer/.idea/*.iml
+/server/VarifyServer/.idea
+/server/ChatServer/*.log
+/client/llfcchat/llfcchat.pro.user.92bdd7d

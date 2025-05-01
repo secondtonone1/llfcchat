@@ -18,6 +18,7 @@
 #include "lineitem.h"
 #include "tcpmgr.h"
 #include "usermgr.h"
+#include <QTimer>
 
 
 ChatDialog::ChatDialog(QWidget *parent) :
@@ -147,10 +148,23 @@ ChatDialog::ChatDialog(QWidget *parent) :
             this, &ChatDialog::slot_text_chat_msg);
 
     connect(ui->chat_page, &ChatPage::sig_append_send_chat_msg, this, &ChatDialog::slot_append_send_chat_msg);
+
+    _timer = new QTimer(this);
+    connect(_timer, &QTimer::timeout, this, [this](){
+            auto user_info = UserMgr::GetInstance()->GetUserInfo();
+            QJsonObject textObj;
+            textObj["fromuid"] = user_info->_uid;
+            QJsonDocument doc(textObj);
+            QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+            emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_HEART_BEAT_REQ, jsonData);
+    });
+
+    _timer->start(10000);
 }
 
 ChatDialog::~ChatDialog()
 {
+    _timer->stop();
     delete ui;
 }
 

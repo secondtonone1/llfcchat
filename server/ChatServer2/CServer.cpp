@@ -3,11 +3,16 @@
 #include "AsioIOServicePool.h"
 #include "UserMgr.h"
 #include "RedisMgr.h"
+#include "ConfigMgr.h"
 
 CServer::CServer(boost::asio::io_context& io_context, short port):_io_context(io_context), _port(port),
-_acceptor(io_context, tcp::endpoint(tcp::v4(),port))
+_acceptor(io_context, tcp::endpoint(tcp::v4(),port)), _timer(_io_context, std::chrono::seconds(60))
 {
 	cout << "Server start success, listen on port : " << _port << endl;
+	//启动定时器
+	_timer.async_wait([this](boost::system::error_code ec) {
+			on_timer(ec);
+		});
 	StartAccept();
 }
 
@@ -51,6 +56,7 @@ void CServer::ClearSession(std::string session_id) {
 
 //根据用户获取session
 shared_ptr<CSession> CServer::GetSession(std::string uuid) {
+	lock_guard<mutex> lock(_mutex);
 	auto it = _sessions.find(uuid);
 	if (it != _sessions.end()) {
 		return it->second;
@@ -60,9 +66,48 @@ shared_ptr<CSession> CServer::GetSession(std::string uuid) {
 
 bool CServer::CheckValid(std::string uuid)
 {
+	lock_guard<mutex> lock(_mutex);
 	auto it = _sessions.find(uuid);
 	if (it != _sessions.end()) {
 		return true;
 	}
 	return false;
+}
+
+void CServer::on_timer(const boost::system::error_code& ec) {
+	std::vector<std::shared_ptr<CSession>> _expired_sessions;
+	int session_count = 0;
+	//此处加锁遍历session
+	{
+		lock_guard<mutex> lock(_mutex);
+		time_t now = std::time(nullptr);
+		for (auto iter = _sessions.begin(); iter != _sessions.end(); iter++) {
+			auto b_expired = iter->second->IsHeartbeatExpired(now);
+			if (b_expired) {
+				//关闭socket, 其实这里也会触发async_read的错误处理
+				iter->second->Close();
+				//收集过期信息
+				_expired_sessions.push_back(iter->second);
+				continue;
+			}
+			session_count++;
+		}
+	}
+
+	//设置session数量
+	auto& cfg = ConfigMgr::Inst();
+	auto self_name = cfg["SelfServer"]["Name"];
+	auto count_str = std::to_string(session_count);
+	RedisMgr::GetInstance()->HSet(LOGIN_COUNT, self_name, count_str);
+
+	//处理过期session, 单独提出，防止死锁
+	for (auto &session : _expired_sessions) {
+		session->DealExceptionSession();
+	}
+	
+	//再次设置，下一个60s检测
+	_timer.expires_after(std::chrono::seconds(60));
+	_timer.async_wait([this](boost::system::error_code ec) {
+		on_timer(ec);
+	});
 }

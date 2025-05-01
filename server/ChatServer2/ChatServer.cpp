@@ -24,7 +24,7 @@ int main()
 	try {
 		auto pool = AsioIOServicePool::GetInstance();
 		//将登录数设置为0
-		RedisMgr::GetInstance()->InitCount(server_name);
+		RedisMgr::GetInstance()->HSet(LOGIN_COUNT, server_name, "0");
 		Defer derfer ([server_name]() {
 				RedisMgr::GetInstance()->HDel(LOGIN_COUNT, server_name);
 				RedisMgr::GetInstance()->Close();

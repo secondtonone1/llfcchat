@@ -9,15 +9,13 @@ CServer::CServer(boost::asio::io_context& io_context, short port):_io_context(io
 _acceptor(io_context, tcp::endpoint(tcp::v4(),port)), _timer(_io_context, std::chrono::seconds(60))
 {
 	cout << "Server start success, listen on port : " << _port << endl;
-	//启动定时器
-	_timer.async_wait([this](boost::system::error_code ec) {
-			on_timer(ec);
-		});
+
 	StartAccept();
 }
 
 CServer::~CServer() {
 	cout << "Server destruct listen on port : " << _port << endl;
+	
 }
 
 void CServer::HandleAccept(shared_ptr<CSession> new_session, const boost::system::error_code& error){
@@ -110,4 +108,18 @@ void CServer::on_timer(const boost::system::error_code& ec) {
 	_timer.async_wait([this](boost::system::error_code ec) {
 		on_timer(ec);
 	});
+}
+
+void CServer::StartTimer()
+{
+	//启动定时器
+	auto self(shared_from_this());
+	_timer.async_wait([self](boost::system::error_code ec) {
+		self->on_timer(ec);
+		});
+}
+
+void CServer::StopTimer()
+{
+	_timer.cancel();
 }

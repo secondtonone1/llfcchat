@@ -108,16 +108,16 @@ struct FriendInfo {
 };
 
 struct UserInfo {
-    UserInfo(int uid, QString name, QString nick, QString icon, int sex, QString last_msg = ""):
-        _uid(uid),_name(name),_nick(nick),_icon(icon),_sex(sex),_last_msg(last_msg){}
+    UserInfo(int uid, QString name, QString nick, QString icon, int sex, QString last_msg = "", QString desc=""):
+        _uid(uid),_name(name),_nick(nick),_icon(icon),_sex(sex),_last_msg(last_msg),_desc(desc){}
 
     UserInfo(std::shared_ptr<AuthInfo> auth):
         _uid(auth->_uid),_name(auth->_name),_nick(auth->_nick),
-        _icon(auth->_icon),_sex(auth->_sex),_last_msg(""){}
+        _icon(auth->_icon),_sex(auth->_sex),_last_msg(""),_desc(""){}
 
     UserInfo(int uid, QString name, QString icon):
     _uid(uid), _name(name), _icon(icon),_nick(_name),
-    _sex(0),_last_msg(""){
+    _sex(0),_last_msg(""),_desc(""){
 
     }
 
@@ -142,6 +142,7 @@ struct UserInfo {
     QString _nick;
     QString _icon;
     int _sex;
+    QString _desc;
     QString _last_msg;
     std::vector<std::shared_ptr<TextChatData>> _chat_msgs;
 };

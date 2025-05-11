@@ -145,7 +145,8 @@ void TcpMgr::initHandlers()
         auto nick = jsonObj["nick"].toString();
         auto icon = jsonObj["icon"].toString();
         auto sex = jsonObj["sex"].toInt();
-        auto user_info = std::make_shared<UserInfo>(uid, name, nick, icon, sex);
+        auto desc = jsonObj["desc"].toString();
+        auto user_info = std::make_shared<UserInfo>(uid, name, nick, icon, sex,"",desc);
  
         UserMgr::GetInstance()->SetUserInfo(user_info);
         UserMgr::GetInstance()->SetToken(jsonObj["token"].toString());

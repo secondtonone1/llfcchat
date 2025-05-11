@@ -16,7 +16,9 @@ public:
     void SetToken(QString token);
     int GetUid();
     QString GetName();
+    QString GetNick();
     QString GetIcon();
+    QString GetDesc();
      std::shared_ptr<UserInfo> GetUserInfo();
     void AppendApplyList(QJsonArray array);
     void AppendFriendList(QJsonArray array);

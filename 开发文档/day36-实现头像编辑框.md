@@ -237,6 +237,10 @@ public:
 - **阻塞执行**：`exec()` 会进入本地事件循环，直到用户点击 OK/Cancel 关闭对话框。
 - **返回结果**：通过外部引用 `outputImage` 将裁剪结果“带出”函数作用域。
 
+
+
+![image-20250511112606921](https://cdn.llfc.club/img/image-20250511112606921.png)
+
 ### 头像裁剪控件
 
 头文件声明
@@ -1257,7 +1261,11 @@ void ImageCropperLabel::setOriginalImage(const QPixmap &pixmap) {
 - **`imageRect`**：记录图像在 Label 坐标系下的实际绘制区域。
 - **`tempImage`**：在 Label 上展示的图，用于用户交互。
 
+![image-20250511114718983](https://cdn.llfc.club/img/image-20250511114718983.png)
+
 ------
+
+![image-20250511115038528](https://cdn.llfc.club/img/image-20250511115038528.png)
 
 ### 裁剪形状设置与重置
 
@@ -1274,7 +1282,13 @@ void ImageCropperLabel::resetCropperPos() {
 
 - **统一调用**：每次改变 shape 或大小，都调用 `resetCropperPos()` 让裁剪框回到可见区域中央。
 
+![image-20250511115825046](https://cdn.llfc.club/img/image-20250511115825046.png)
+
 ------
+
+
+
+![image-20250511120205707](https://cdn.llfc.club/img/image-20250511120205707.png)
 
 ### 获取裁剪结果
 
@@ -1299,6 +1313,8 @@ QPixmap ImageCropperLabel::getCroppedImage(OutputShape shape) {
     return resultImage;
 }
 ```
+
+![image-20250511120838187](https://cdn.llfc.club/img/image-20250511120838187.png)
 
 - **核心思路**：先把用户框映射回原图，再按需求做矩形或椭圆裁剪。
 
@@ -1340,6 +1356,8 @@ QPixmap ImageCropperLabel::getCroppedImage(OutputShape shape) {
 
 1. 在 `mask` 上，填充一个黑色的圆角矩形；
 2. 当你调用 `resultImage.setMask(mask);` 时，Qt 会把这部分“黑色”区域映射为 **保留原图像素**，而把剩下的（白色）区域变成透明。
+
+![image-20250511121434047](https://cdn.llfc.club/img/image-20250511121434047.png)
 
 ------
 
@@ -1457,7 +1475,7 @@ p2.addEllipse(cropperRect);
 
 ------
 
-
+![image-20250511122719029](https://cdn.llfc.club/img/image-20250511122719029.png)
 
 **“方块手柄”高光 —— `drawSquareEdge(bool onlyCorners)`**
 
@@ -1484,7 +1502,7 @@ void ImageCropperLabel::drawSquareEdge(bool onlyFourCorners) {
 }
 ```
 
-
+![image-20250511123344886](https://cdn.llfc.club/img/image-20250511123344886.png)
 
 此函数通常会：
 

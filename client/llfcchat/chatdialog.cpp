@@ -164,6 +164,8 @@ ChatDialog::ChatDialog(QWidget *parent) :
     });
 
     _timer->start(10000);
+
+    connect(ui->friend_apply_page, &ApplyFriendPage::sig_set_read_point, this, &ChatDialog::slot_set_red_point);
 }
 
 ChatDialog::~ChatDialog()
@@ -327,6 +329,13 @@ void ChatDialog::slot_append_send_chat_msg(std::shared_ptr<TextChatData> msgdata
     }
 }
 
+void ChatDialog::slot_set_red_point(bool state)
+{
+    qDebug() << "state = " << state;
+    ui->side_contact_lb->ShowRedPoint(state);
+    ui->con_user_list->ShowRedPoint(state);
+}
+
 void ChatDialog::AddLBGroup(StateWidget* lb)
 {
     _lb_list.push_back(lb);
@@ -361,22 +370,22 @@ void ChatDialog::addChatUserList()
 
     //模拟测试条目
     // 创建QListWidgetItem，并设置自定义的widget
-    for(int i = 0; i < 13; i++){
-        int randomValue = QRandomGenerator::global()->bounded(100); // 生成0到99之间的随机整数
-        int str_i = randomValue%strs.size();
-        int head_i = randomValue%heads.size();
-        int name_i = randomValue%names.size();
+    // for(int i = 0; i < 13; i++){
+    //     int randomValue = QRandomGenerator::global()->bounded(100); // 生成0到99之间的随机整数
+    //     int str_i = randomValue%strs.size();
+    //     int head_i = randomValue%heads.size();
+    //     int name_i = randomValue%names.size();
 
-        auto *chat_user_wid = new ChatUserWid();
-        auto user_info = std::make_shared<UserInfo>(0,names[name_i],
-                                                    names[name_i],heads[head_i],0,strs[str_i]);
-        chat_user_wid->SetInfo(user_info);
-        QListWidgetItem *item = new QListWidgetItem;
-        //qDebug()<<"chat_user_wid sizeHint is " << chat_user_wid->sizeHint();
-        item->setSizeHint(chat_user_wid->sizeHint());
-        ui->chat_user_list->addItem(item);
-        ui->chat_user_list->setItemWidget(item, chat_user_wid);
-    }
+    //     auto *chat_user_wid = new ChatUserWid();
+    //     auto user_info = std::make_shared<UserInfo>(0,names[name_i],
+    //                                                 names[name_i],heads[head_i],0,strs[str_i]);
+    //     chat_user_wid->SetInfo(user_info);
+    //     QListWidgetItem *item = new QListWidgetItem;
+    //     //qDebug()<<"chat_user_wid sizeHint is " << chat_user_wid->sizeHint();
+    //     item->setSizeHint(chat_user_wid->sizeHint());
+    //     ui->chat_user_list->addItem(item);
+    //     ui->chat_user_list->setItemWidget(item, chat_user_wid);
+    // }
 
 }
 

@@ -6,6 +6,7 @@
 #include <QRegExp>
 #include <QRegularExpression>
 #include <QPainter>
+#include <QPainterPath>
 
 LoginDialog::LoginDialog(QWidget *parent) :
     QDialog(parent),

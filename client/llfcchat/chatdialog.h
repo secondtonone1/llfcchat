@@ -67,6 +67,7 @@ public slots:
     void slot_item_clicked(QListWidgetItem *item);
     void slot_text_chat_msg(std::shared_ptr<TextChatMsg> msg);
     void slot_append_send_chat_msg(std::shared_ptr<TextChatData> msgdata);
+    void slot_set_red_point(bool state);
 private slots:
 
 };

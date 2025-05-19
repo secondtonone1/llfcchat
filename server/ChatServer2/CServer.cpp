@@ -73,24 +73,33 @@ bool CServer::CheckValid(std::string uuid)
 }
 
 void CServer::on_timer(const boost::system::error_code& ec) {
+	if (ec) {
+		std::cout << "timer error: " << ec.message() << std::endl;
+		return;
+	}
+
 	std::vector<std::shared_ptr<CSession>> _expired_sessions;
 	int session_count = 0;
-	//此处加锁遍历session
+
+	std::map<std::string, shared_ptr<CSession>> sessions_copy;
 	{
 		lock_guard<mutex> lock(_mutex);
-		time_t now = std::time(nullptr);
-		for (auto iter = _sessions.begin(); iter != _sessions.end(); iter++) {
-			auto b_expired = iter->second->IsHeartbeatExpired(now);
-			if (b_expired) {
-				//关闭socket, 其实这里也会触发async_read的错误处理
-				iter->second->Close();
-				//收集过期信息
-				_expired_sessions.push_back(iter->second);
-				continue;
-			}
-			session_count++;
-		}
+		sessions_copy = _sessions;
 	}
+
+	time_t now = std::time(nullptr);
+	for (auto iter = sessions_copy.begin(); iter != sessions_copy.end(); iter++) {
+		auto b_expired = iter->second->IsHeartbeatExpired(now);
+		if (b_expired) {
+			//关闭socket, 其实这里也会触发async_read的错误处理
+			iter->second->Close();
+			//收集过期信息
+			_expired_sessions.push_back(iter->second);
+			continue;
+		}
+		session_count++;
+	}
+
 
 	//设置session数量
 	auto& cfg = ConfigMgr::Inst();

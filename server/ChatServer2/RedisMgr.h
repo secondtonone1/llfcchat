@@ -152,7 +152,7 @@ private:
 				}
 
 				//4.如果都没有问题，则把连接返回连接池
-				std::cout << "connection alive" << std::endl;
+				//std::cout << "connection alive" << std::endl;
 				freeReplyObject(reply);
 				returnConnection(context);
 			}catch(std::exception& exp){

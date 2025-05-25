@@ -177,7 +177,7 @@ private:
 						continue;
 					}
 					// 4. 如果都没问题，则还回去
-					std::cout << "connection alive" << std::endl;
+					//std::cout << "connection alive" << std::endl;
 					freeReplyObject(reply);
 					returnConnection(context);
 				}

@@ -61,6 +61,8 @@ enum MSG_IDS {
 	ID_NOTIFY_OFF_LINE_REQ = 1021, //通知用户下线
 	ID_HEART_BEAT_REQ = 1023,      //心跳请求
 	ID_HEARTBEAT_RSP = 1024,       //心跳回复
+	ID_LOAD_CHAT_THREAD_REQ = 1025, //加载聊天线程请求
+	ID_LOAD_CHAT_THREAD_RSP = 1026, //加载聊天线程回复
 };
 
 #define USERIPPREFIX  "uip_"

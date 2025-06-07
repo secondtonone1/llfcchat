@@ -472,3 +472,57 @@ bool MysqlDao::GetFriendList(int self_id, std::vector<std::shared_ptr<UserInfo> 
 
 	return true;
 }
+
+bool MysqlDao::GetUserThreads(int userId, std::vector<std::shared_ptr<ChatThreadInfo >>& threads)
+{
+	auto con = pool_->getConnection();
+	if (con == nullptr) {
+		return false;
+	}
+
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+	auto & conn = con->_con;
+	try {
+		// Prepare the union query
+		std::unique_ptr<sql::PreparedStatement> pstmt(
+			conn->prepareStatement(
+				"SELECT thread_id, 'private' AS type ,"
+				"user1_id, user2_id "
+				"FROM private_chat "
+				"WHERE user1_id = ? OR user2_id = ? "
+				"UNION "
+				"SELECT thread_id, 'group' AS type ,"
+				"0 AS user1_id, 0 AS user2_id "
+				"FROM group_chat_member "
+				"WHERE user_id = ?"));
+
+		// Bind parameters
+		pstmt->setInt64(1, userId);
+		pstmt->setInt64(2, userId);
+		pstmt->setInt64(3, userId);
+
+		// Execute query
+		std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+
+		// Iterate through results
+		while (res->next()) {
+			auto cti = std::make_shared<ChatThreadInfo>();
+			cti->_thread_id = res->getInt("thread_id");
+			cti->_type = res->getString("type");
+			cti->_user1_id = res->getInt("user1_id");
+			cti->_user2_id = res->getInt("user2_id");
+			threads.push_back(cti);
+		}
+
+	}catch(sql::SQLException& e) {
+		std::cerr << "SQLException: " << e.what();
+		std::cerr << " (MySQL error code: " << e.getErrorCode();
+		std::cerr << ", SQLState: " << e.getSQLState() << " )" << std::endl;
+		return false;
+	}
+	return true;
+}
+
+

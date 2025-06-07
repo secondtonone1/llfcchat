@@ -28,3 +28,10 @@ struct ApplyInfo {
 	int _status;
 };
 
+//聊天线程信息
+struct ChatThreadInfo {
+	int _thread_id;
+	std::string _type;     // "private" or "group"
+	int _user1_id;    // 私聊时对应 private_chat.user1_id；群聊时设为 0
+	int _user2_id;    // 私聊时对应 private_chat.user2_id；群聊时设为 0
+};

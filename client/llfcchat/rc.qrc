@@ -53,5 +53,9 @@
         <file>res/settings_press.png</file>
         <file>res/settings_select_press.png</file>
         <file>res/settings_hover.png</file>
+        <file>res/loading2.gif</file>
+        <file>res/readed.png</file>
+        <file>res/send_fail.png</file>
+        <file>res/unread.png</file>
     </qresource>
 </RCC>

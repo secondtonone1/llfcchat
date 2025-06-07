@@ -806,5 +806,9 @@ ApplyFriendItem #addBtn[state='press'] {
  border-image: url(:/res/voice_chat_press.png);
 }
 
-#
+LoadingDlg #status_lb {
+    color:rgb(153,153,153);
+    font-size: 18px;
+    font-family: "Microsoft YaHei";
+}
 

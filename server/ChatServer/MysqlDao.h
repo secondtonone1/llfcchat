@@ -245,6 +245,7 @@ public:
 	std::shared_ptr<UserInfo> GetUser(std::string name);
 	bool GetApplyList(int touid, std::vector<std::shared_ptr<ApplyInfo>>& applyList, int offset, int limit );
 	bool GetFriendList(int self_id, std::vector<std::shared_ptr<UserInfo> >& user_info);
+	bool GetUserThreads(int userId, std::vector<std::shared_ptr<ChatThreadInfo> >& threads);
 private:
 	std::unique_ptr<MySqlPool> pool_;
 };

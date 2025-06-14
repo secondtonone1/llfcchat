@@ -46,7 +46,9 @@ private:
     ChatUIMode _state;
     QWidget* _last_widget;
     //todo...
-    QMap<int, QListWidgetItem*> _chat_items_added;
+    //QMap<int, QListWidgetItem*> _chat_items_added;
+    //chat_thred_id和对应的item的映射关系。
+    QMap<int, QListWidgetItem*>  _chat_thread_items;
     int _cur_chat_uid;
     QTimer * _timer;
     LoadingDlg* _loading_dlg;
@@ -69,7 +71,10 @@ public slots:
     void slot_item_clicked(QListWidgetItem *item);
     void slot_text_chat_msg(std::shared_ptr<TextChatMsg> msg);
     void slot_append_send_chat_msg(std::shared_ptr<TextChatData> msgdata);
-    void slot_load_chat_thread(std::vector<std::shared_ptr<ChatThreadInfo>> chat_threads);
+    void slot_load_chat_thread(bool load_more, int last_thread_id,
+        std::vector<std::shared_ptr<ChatThreadInfo>> chat_threads);
+
+    void slot_create_private_chat(int uid, int other_id, int thread_id);
 private slots:
 
 };

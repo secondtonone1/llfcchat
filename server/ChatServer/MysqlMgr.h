@@ -20,7 +20,14 @@ public:
 	std::shared_ptr<UserInfo> GetUser(std::string name);
 	bool GetApplyList(int touid, std::vector<std::shared_ptr<ApplyInfo>>& applyList, int begin, int limit=10);
 	bool GetFriendList(int self_id, std::vector<std::shared_ptr<UserInfo> >& user_info);
-	bool GetUserThreads(int userId, std::vector<std::shared_ptr<ChatThreadInfo >>& threads);
+	bool GetUserThreads(int64_t userId,
+		int64_t lastId,
+		int      pageSize,
+		std::vector<std::shared_ptr<ChatThreadInfo>>& threads,
+		bool& loadMore,
+		int& nextLastId);
+
+	bool CreatePrivateChat(int user1_id, int user2_id, int &thread_id);
 private:
 	MysqlMgr();
 	MysqlDao  _dao;

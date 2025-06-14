@@ -39,7 +39,13 @@ private:
 	bool GetFriendApplyInfo(int to_uid, std::vector<std::shared_ptr<ApplyInfo>>& list);
 	bool GetFriendList(int self_id, std::vector<std::shared_ptr<UserInfo>> & user_list);
 	void GetUserThreadsHandler(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data);
-	bool GetUserThreads(int userId, std::vector<std::shared_ptr<ChatThreadInfo>>& threads);
+	bool GetUserThreads(int64_t userId,
+		int64_t lastId,
+		int      pageSize,
+		std::vector<std::shared_ptr<ChatThreadInfo>>& threads,
+		bool& loadMore,
+		int& nextLastId);
+	void CreatePrivateChat(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data);
 	std::thread _worker_thread;
 	std::queue<shared_ptr<LogicNode>> _msg_que;
 	std::mutex _mutex;

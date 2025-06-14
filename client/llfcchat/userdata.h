@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <vector>
 #include <QJsonObject>
+#include <QMap>
 
 class SearchInfo {
 public:
@@ -181,6 +182,16 @@ struct ChatThreadInfo {
     QString _type;     // "private" or "group"
     int _user1_id;    // 私聊时对应 private_chat.user1_id；群聊时设为 0
     int _user2_id;    // 私聊时对应 private_chat.user2_id；群聊时设为 0
+};
+
+//客户端本地存储的聊天线程数据结构
+struct ChatThreadData {
+    int _user1_id;
+    int _user2_id;
+    int _last_msg_id;
+    int _thread_id;
+    //缓存消息map，后期抽象为基类，因为会有图片等其他类型消息
+    QMap<int, std::shared_ptr<TextChatData>>  _msg_map;
 };
 
 #endif

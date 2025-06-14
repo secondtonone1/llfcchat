@@ -15,6 +15,7 @@ enum ErrorCodes {
 	PasswdInvalid = 1009,   //密码更新失败
 	TokenInvalid = 1010,   //Token失效
 	UidInvalid = 1011,  //uid无效
+	CREATE_CHAT_FAILED = 1012, //创建聊天失败
 };
 
 
@@ -63,6 +64,8 @@ enum MSG_IDS {
 	ID_HEARTBEAT_RSP = 1024,       //心跳回复
 	ID_LOAD_CHAT_THREAD_REQ = 1025, //加载聊天线程请求
 	ID_LOAD_CHAT_THREAD_RSP = 1026, //加载聊天线程回复
+	ID_CREATE_PRIVATE_CHAT_REQ = 1027, //创建私聊请求
+	ID_CREATE_PRIVATE_CHAT_RSP = 1028, //创建私聊回复
 };
 
 #define USERIPPREFIX  "uip_"

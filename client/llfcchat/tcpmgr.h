@@ -44,7 +44,9 @@ signals:
     void sig_text_chat_msg(std::shared_ptr<TextChatMsg> msg);
     void sig_notify_offline();
     void sig_connection_closed();
-    void sig_load_chat_thread(std::vector<std::shared_ptr<ChatThreadInfo>> chat_list);
+    void sig_load_chat_thread(bool load_more, int last_thread_id, 
+        std::vector<std::shared_ptr<ChatThreadInfo>> chat_list);
+    void sig_create_private_chat(int uid, int other_id, int thread_id);
 };
 
 #endif // TCPMGR_H

@@ -99,6 +99,8 @@ void LogicSystem::RegisterCallBacks() {
 	_fun_callbacks[ID_LOAD_CHAT_THREAD_REQ] = std::bind(&LogicSystem::GetUserThreadsHandler, this,
 		placeholders::_1, placeholders::_2, placeholders::_3);
 	
+	_fun_callbacks[ID_CREATE_PRIVATE_CHAT_REQ] = std::bind(&LogicSystem::CreatePrivateChat, this,
+		placeholders::_1, placeholders::_2, placeholders::_3);
 }
 
 void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id, const string &msg_data) {
@@ -720,6 +722,7 @@ void LogicSystem::GetUserThreadsHandler(std::shared_ptr<CSession> session,
 	Json::Value root;
 	reader.parse(msg_data, root);
 	auto uid = root["uid"].asInt();
+	int last_id = root["thread_id"].asInt();
 	std::cout << "get uid  threads  " << uid << std::endl;
 
 	Json::Value  rtvalue;
@@ -731,12 +734,19 @@ void LogicSystem::GetUserThreadsHandler(std::shared_ptr<CSession> session,
 		});
 	
 	std::vector<std::shared_ptr<ChatThreadInfo>> threads;
-	bool res = GetUserThreads(uid, threads);
+	
+	int page_size = 10;
+	bool load_more = false;
+	int next_last_id = 0;
+	bool res = GetUserThreads(uid, last_id, page_size, threads, load_more, next_last_id);
 	if (!res) {
 		rtvalue["error"] = ErrorCodes::UidInvalid;
 		return;
 	}
 
+
+	rtvalue["load_more"] = load_more;
+	rtvalue["next_last_id"] = (int)next_last_id;
 	//整理threads数据写入json返回
 	for (auto& thread : threads) {
 		Json::Value thread_value;
@@ -748,8 +758,41 @@ void LogicSystem::GetUserThreadsHandler(std::shared_ptr<CSession> session,
 	}
 }
 
-bool LogicSystem::GetUserThreads(int userId, 
-	std::vector<std::shared_ptr<ChatThreadInfo>>& threads)
+bool LogicSystem::GetUserThreads(int64_t userId,
+	int64_t lastId,
+	int      pageSize,
+	std::vector<std::shared_ptr<ChatThreadInfo>>& threads,
+	bool& loadMore,
+	int& nextLastId)
 {
-	return MysqlMgr::GetInstance()->GetUserThreads(userId, threads);
+	return MysqlMgr::GetInstance()->GetUserThreads(userId, lastId, pageSize, 
+		threads, loadMore, nextLastId);
+}
+
+void LogicSystem::CreatePrivateChat(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	reader.parse(msg_data, root);
+	auto uid = root["uid"].asInt();
+	auto other_id = root["other_id"].asInt();
+	
+	Json::Value  rtvalue;
+	rtvalue["error"] = ErrorCodes::Success;
+	rtvalue["uid"] = uid;
+	rtvalue["other_id"] = other_id;
+
+	Defer defer([this, &rtvalue, session]() {
+		std::string return_str = rtvalue.toStyledString();
+		session->Send(return_str, ID_CREATE_PRIVATE_CHAT_RSP);
+		});
+
+	int thread_id = 0;
+	bool res = MysqlMgr::GetInstance()->CreatePrivateChat(uid, other_id, thread_id);
+	if (!res) {
+		rtvalue["error"] = ErrorCodes::CREATE_CHAT_FAILED;
+		return;
+	}
+
+	rtvalue["thread_id"] = thread_id;
 }

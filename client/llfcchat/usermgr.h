@@ -36,6 +36,10 @@ public:
     void AddFriend(std::shared_ptr<AuthInfo> auth_info);
     std::shared_ptr<FriendInfo> GetFriendById(int uid);
     void AppendFriendChatMsg(int friend_id,std::vector<std::shared_ptr<TextChatData>>);
+    int GetLastChatThreadId();
+    void SetLastChatThreadId(int id);
+    void AddChatThreadData(std::shared_ptr<ChatThreadData> chat_thread_data, int other_uid);
+    int GetThreadIdByUid(int uid);
 private:
     UserMgr();
     std::shared_ptr<UserInfo> _user_info;
@@ -45,7 +49,11 @@ private:
     QString _token;
     int _chat_loaded;
     int _contact_loaded;
-
+    //建立会话id到数据的映射关系
+    QMap<int, std::shared_ptr<ChatThreadData>> _chat_map;
+    int _last_chat_thread_id;
+    //缓存其他用户uid和聊天的thread_id的映射关系。
+    QMap<int, int> _uid_to_thread_id;
 public slots:
     void SlotAddFriendRsp(std::shared_ptr<AuthRsp> rsp);
     void SlotAddFriendAuth(std::shared_ptr<AuthInfo> auth);

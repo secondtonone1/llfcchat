@@ -121,7 +121,8 @@ void ApplyFriend::SetSearchInfo(std::shared_ptr<SearchInfo> si)
     _si = si;
     auto applyname = UserMgr::GetInstance()->GetName();
     auto bakname = si->_name;
-    ui->name_ed->setText(applyname);
+    QString str = QString("您好,我是%1").arg(applyname);
+    ui->name_ed->setText(str);
     ui->back_ed->setText(bakname);
 }
 
@@ -201,7 +202,6 @@ void ApplyFriend::resetLabels()
     auto max_width = ui->gridWidget->width();
     auto label_height = 0;
     for(auto iter = _friend_labels.begin(); iter != _friend_labels.end(); iter++){
-        //todo... 添加宽度统计
         if( _label_point.x() + iter.value()->width() > max_width) {
             _label_point.setY(_label_point.y()+iter.value()->height()+6);
             _label_point.setX(2);
@@ -239,7 +239,6 @@ void ApplyFriend::addLabel(QString name)
 	tmplabel->setObjectName("FriendLabel");
 
 	auto max_width = ui->gridWidget->width();
-	//todo... 添加宽度统计
 	if (_label_point.x() + tmplabel->width() > max_width) {
 		_label_point.setY(_label_point.y() + tmplabel->height() + 6);
 		_label_point.setX(2);

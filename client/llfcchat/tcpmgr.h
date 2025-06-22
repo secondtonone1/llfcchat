@@ -7,6 +7,7 @@
 #include <QObject>
 #include "userdata.h"
 #include <QJsonArray>
+#include <memory>
 
 class TcpMgr:public QObject, public Singleton<TcpMgr>,
         public std::enable_shared_from_this<TcpMgr>
@@ -41,7 +42,7 @@ signals:
     void sig_friend_apply(std::shared_ptr<AddFriendApply>);
     void sig_add_auth_friend(std::shared_ptr<AuthInfo>);
     void sig_auth_rsp(std::shared_ptr<AuthRsp>);
-    void sig_text_chat_msg(std::shared_ptr<TextChatMsg> msg);
+    void sig_text_chat_msg(std::vector<std::shared_ptr<TextChatData>> msg_list);
     void sig_notify_offline();
     void sig_connection_closed();
     void sig_load_chat_thread(bool load_more, int last_thread_id, 

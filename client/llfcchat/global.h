@@ -158,4 +158,17 @@ enum MsgStatus{
     READED = 2  //对方已读
 };
 
+//聊天形式，私聊和群聊
+enum class ChatFormType {
+    PRIVATE = 0,
+    GROUP = 1
+};
+
+//聊天消息类型，文本，图片，文件等
+enum class ChatMsgType {
+    TEXT = 0,
+    PIC = 1,
+    FILE = 2
+};
+
 #endif // GLOBAL_H

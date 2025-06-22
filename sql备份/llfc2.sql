@@ -11,11 +11,48 @@
  Target Server Version : 80027 (8.0.27)
  File Encoding         : 65001
 
- Date: 04/06/2025 10:05:59
+ Date: 22/06/2025 12:17:41
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for chat_message
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_message`;
+CREATE TABLE `chat_message`  (
+  `message_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `thread_id` bigint UNSIGNED NOT NULL,
+  `sender_id` bigint UNSIGNED NOT NULL,
+  `recv_id` bigint UNSIGNED NOT NULL,
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0=未读 1=已读 2=撤回',
+  PRIMARY KEY (`message_id`) USING BTREE,
+  INDEX `idx_thread_created`(`thread_id` ASC, `created_at` ASC) USING BTREE,
+  INDEX `idx_thread_message`(`thread_id` ASC, `message_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of chat_message
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for chat_thread
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_thread`;
+CREATE TABLE `chat_thread`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `type` enum('private','group') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 27 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of chat_thread
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for friend
@@ -28,7 +65,7 @@ CREATE TABLE `friend`  (
   `back` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `self_friend`(`self_id` ASC, `friend_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 185 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 237 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of friend
@@ -60,8 +97,8 @@ INSERT INTO `friend` VALUES (165, 1085, 1080, 'cpt2');
 INSERT INTO `friend` VALUES (166, 1080, 1085, '');
 INSERT INTO `friend` VALUES (167, 1087, 1094, 'ming');
 INSERT INTO `friend` VALUES (168, 1094, 1087, '');
-INSERT INTO `friend` VALUES (183, 1002, 1019, 'zack');
-INSERT INTO `friend` VALUES (184, 1019, 1002, '');
+INSERT INTO `friend` VALUES (185, 1099, 1098, 'Fany');
+INSERT INTO `friend` VALUES (186, 1098, 1099, '');
 
 -- ----------------------------
 -- Table structure for friend_apply
@@ -72,43 +109,27 @@ CREATE TABLE `friend_apply`  (
   `from_uid` int NOT NULL,
   `to_uid` int NOT NULL,
   `status` smallint NOT NULL DEFAULT 0,
+  `descs` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '',
+  `back_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `from_to_uid`(`from_uid` ASC, `to_uid` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 144 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 183 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of friend_apply
 -- ----------------------------
-INSERT INTO `friend_apply` VALUES (49, 1054, 1055, 1);
-INSERT INTO `friend_apply` VALUES (52, 1056, 1012, 0);
-INSERT INTO `friend_apply` VALUES (64, 1032, 1035, 0);
-INSERT INTO `friend_apply` VALUES (68, 1037, 1038, 1);
-INSERT INTO `friend_apply` VALUES (99, 2030, 2020, 1);
-INSERT INTO `friend_apply` VALUES (111, 1080, 1079, 1);
-INSERT INTO `friend_apply` VALUES (123, 2181, 2182, 1);
-INSERT INTO `friend_apply` VALUES (125, 1079, 1080, 1);
-INSERT INTO `friend_apply` VALUES (126, 1090, 2020, 1);
-INSERT INTO `friend_apply` VALUES (127, 2030, 1090, 1);
-INSERT INTO `friend_apply` VALUES (128, 2020, 1090, 0);
-INSERT INTO `friend_apply` VALUES (129, 1093, 2020, 1);
-INSERT INTO `friend_apply` VALUES (130, 2030, 1093, 1);
-INSERT INTO `friend_apply` VALUES (132, 1080, 1085, 1);
-INSERT INTO `friend_apply` VALUES (134, 1079, 1085, 1);
-INSERT INTO `friend_apply` VALUES (135, 1094, 1087, 1);
-INSERT INTO `friend_apply` VALUES (141, 1002, 1042, 0);
-INSERT INTO `friend_apply` VALUES (142, 1002, 1008, 0);
-INSERT INTO `friend_apply` VALUES (143, 1019, 1002, 1);
+INSERT INTO `friend_apply` VALUES (182, 1096, 1097, 0, '', '');
 
 -- ----------------------------
 -- Table structure for group_chat
 -- ----------------------------
 DROP TABLE IF EXISTS `group_chat`;
 CREATE TABLE `group_chat`  (
-  `thread_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `thread_id` bigint UNSIGNED NOT NULL COMMENT '引用chat_thread.id',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '群聊名称',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`thread_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of group_chat
@@ -137,13 +158,15 @@ CREATE TABLE `group_chat_member`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `private_chat`;
 CREATE TABLE `private_chat`  (
-  `thread_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `thread_id` bigint UNSIGNED NOT NULL COMMENT '引用chat_thread.id',
   `user1_id` bigint UNSIGNED NOT NULL,
   `user2_id` bigint UNSIGNED NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`thread_id`) USING BTREE,
-  UNIQUE INDEX `uniq_private_thread`(`user1_id` ASC, `user2_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+  UNIQUE INDEX `uniq_private_thread`(`user1_id` ASC, `user2_id` ASC) USING BTREE,
+  INDEX `idx_private_user1_thread`(`user1_id` ASC, `thread_id` ASC) USING BTREE,
+  INDEX `idx_private_user2_thread`(`user2_id` ASC, `thread_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of private_chat
@@ -167,12 +190,12 @@ CREATE TABLE `user`  (
   UNIQUE INDEX `uid`(`uid` ASC) USING BTREE,
   UNIQUE INDEX `email`(`email` ASC) USING BTREE,
   INDEX `name`(`name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 745238 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 745251 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (3, 1002, 'llfc', 'secondtonone1@163.com', '654321)', 'llfc', '', 0, ':/res/head_1.jpg');
+INSERT INTO `user` VALUES (3, 1002, 'llfc', 'secondtonone1@163.com', '654321)', 'llfc', '', 0, ':/res/head_3.jpg');
 INSERT INTO `user` VALUES (4, 1003, 'tc', '18165031775@qq.com', '123456', 'tc', '', 0, ':/res/head_1.jpg');
 INSERT INTO `user` VALUES (5, 1004, 'yuanweihua', '1456188862@qq.com', '}kyn;89>?<', 'yuanweihua', '', 0, ':/res/head_1.jpg');
 INSERT INTO `user` VALUES (6, 1005, 'test', '2022202210033@whu.edu.cn', '}kyn;89>?<', 'test', '', 0, ':/res/head_1.jpg');
@@ -216,7 +239,14 @@ INSERT INTO `user` VALUES (93, 1085, 'xiao', '2557854108@qq.com', '745230', 'xia
 INSERT INTO `user` VALUES (95, 1087, 'ame', '1161761559@qq.com', '745230', 'ame', '', 0, '');
 INSERT INTO `user` VALUES (745235, 1093, 'yzmb', '11102766@qq.com', '745230', 'yzmb', '', 0, ':/res/head_1.jpg');
 INSERT INTO `user` VALUES (745236, 1094, 'ming', '1951831076@qq.com', '745230', 'ming', '', 0, ':/res/head_2.jpg');
-INSERT INTO `user` VALUES (745237, 1095, '2333334', '3328713312@qq.com', '12345', '2333334', '', 0, '479b');
+INSERT INTO `user` VALUES (745238, 1096, 'qqq', '1508945593@qq.com', 'wqctr', '', '', 0, '');
+INSERT INTO `user` VALUES (745239, 1097, 'www', '2597586064@qq.com', '745230', '', '', 0, '');
+INSERT INTO `user` VALUES (745240, 1098, 'Fany', '2848827727@qq.com', '745230', 'Fany', '', 0, ':/res/head_1.jpg');
+INSERT INTO `user` VALUES (745241, 1099, 'Zhang', '3228437938@qq.com', '745230', 'Zhang', '', 0, ':/res/head_4.jpg');
+INSERT INTO `user` VALUES (745242, 1100, '111', '3@q.com', '666666', '111', '', 0, ':/res/head_4.jpg');
+INSERT INTO `user` VALUES (745243, 1101, 'wdg', 'wdg@sb.com', '666666', 'wdg', '', 0, ':/res/head_1.jpg');
+INSERT INTO `user` VALUES (745244, 1102, 'HuYao', '3391870934@qq.com', '745230', 'HuYao', '', 0, ':/res/head_2.jpg');
+INSERT INTO `user` VALUES (745247, 1104, 'bishi', '3031719794@qq.com', '745745', 'bishi', '', 0, ':/res/head_4.jpg');
 
 -- ----------------------------
 -- Table structure for user_id
@@ -230,7 +260,7 @@ CREATE TABLE `user_id`  (
 -- ----------------------------
 -- Records of user_id
 -- ----------------------------
-INSERT INTO `user_id` VALUES (1095);
+INSERT INTO `user_id` VALUES (1107);
 
 -- ----------------------------
 -- Procedure structure for reg_user

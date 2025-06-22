@@ -272,8 +272,22 @@ void TcpMgr::initHandlers()
         QString icon = jsonObj["icon"].toString();
         int sex = jsonObj["sex"].toInt();
 
+        std::vector<std::shared_ptr<TextChatData>> chat_datas;
+        for (const QJsonValue& data : jsonObj["chat_datas"].toArray()) {
+            auto send_uid = data["sender"].toInt();
+            auto msg_id = data["msg_id"].toInt();
+            auto thread_id = data["thread_id"].toInt();
+            auto unique_id = data["unique_id"].toInt();
+            auto msg_content = data["msg_content"].toString();
+            auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                ChatMsgType::TEXT, msg_content, send_uid);
+            chat_datas.push_back(chat_data);
+        }
+
         auto auth_info = std::make_shared<AuthInfo>(from_uid,name,
                                                     nick, icon, sex);
+
+        auth_info->SetChatDatas(chat_datas);
 
         emit sig_add_auth_friend(auth_info);
         });
@@ -339,7 +353,21 @@ void TcpMgr::initHandlers()
         auto icon = jsonObj["icon"].toString();
         auto sex = jsonObj["sex"].toInt();
         auto uid = jsonObj["uid"].toInt();
+        
+        std::vector<std::shared_ptr<TextChatData>> chat_datas;
+        for (const QJsonValue& data : jsonObj["chat_datas"].toArray()) {
+            auto send_uid = data["sender"].toInt();
+            auto msg_id = data["msg_id"].toInt();
+            auto thread_id = data["thread_id"].toInt();
+            auto unique_id = data["unique_id"].toInt();
+            auto msg_content = data["msg_content"].toString();
+            auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                ChatMsgType::TEXT, msg_content, send_uid);
+            chat_datas.push_back(chat_data);
+        }
+
         auto rsp = std::make_shared<AuthRsp>(uid, name, nick, icon, sex);
+        rsp->SetChatDatas(chat_datas);
         emit sig_auth_rsp(rsp);
 
         qDebug() << "Auth Friend Success " ;
@@ -403,9 +431,21 @@ void TcpMgr::initHandlers()
         }
 
         qDebug() << "Receive Text Chat Notify Success " ;
-        auto msg_ptr = std::make_shared<TextChatMsg>(jsonObj["fromuid"].toInt(),
-                jsonObj["touid"].toInt(),jsonObj["text_array"].toArray());
-        emit sig_text_chat_msg(msg_ptr);
+
+        std::vector<std::shared_ptr<TextChatData>> msg_vecs;
+        // 遍历 QJsonArray 并输出每个元素
+        for (const QJsonValue& value : jsonObj["text_array"].toArray()) {
+            int msg_id = value["msg_id"].toInt();
+            QString unique_id = value["unique_id"].toString();
+            QString content = value["content"].toString();
+            int thread_id = value["thread_id"].toInt();
+
+            auto text_chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                ChatMsgType::TEXT, content, jsonObj["fromuid"].toInt());
+            msg_vecs.push_back(text_chat_data);
+        }
+
+        emit sig_text_chat_msg(msg_vecs);
       });
 
     _handlers.insert(ID_NOTIFY_OFF_LINE_REQ,[this](ReqId id, int len, QByteArray data){

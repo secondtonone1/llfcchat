@@ -25,17 +25,18 @@ bool MysqlMgr::CheckPwd(const std::string& name, const std::string& pwd, UserInf
 	return _dao.CheckPwd(name, pwd, userInfo);
 }
 
-bool MysqlMgr::AddFriendApply(const int& from, const int& to)
+bool MysqlMgr::AddFriendApply(const int& from, const int& to, const std::string& desc, const std::string& back_name)
 {
-	return _dao.AddFriendApply(from, to);
+	return _dao.AddFriendApply(from, to, desc, back_name);
 }
 
 bool MysqlMgr::AuthFriendApply(const int& from, const int& to) {
 	return _dao.AuthFriendApply(from, to);
 }
 
-bool MysqlMgr::AddFriend(const int& from, const int& to, std::string back_name) {
-	return _dao.AddFriend(from, to, back_name);
+bool MysqlMgr::AddFriend(const int& from, const int& to, std::string back_name, 
+	std::vector<std::shared_ptr<AddFriendMsg>>& msg_list) {
+	return _dao.AddFriend(from, to, back_name, msg_list);
 }
 
 std::shared_ptr<UserInfo> MysqlMgr::GetUser(int uid)

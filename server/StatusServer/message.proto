@@ -47,7 +47,10 @@ message AddFriendReq {
 	int32  applyuid = 1;
 	string name = 2;
 	string desc = 3;
-	int32  touid = 4;
+	string icon = 4;
+	string nick = 5;
+	int32  sex = 6;
+	int32  touid = 7;
 }
 
 message AddFriendRsp {
@@ -80,9 +83,18 @@ message SendChatMsgRsp{
 		int32 touid = 3;
 }
 
+message AddFriendMsg{
+	int32 sender_id = 1;
+	string unique_id = 2;
+	int32 msg_id = 3;
+	int32 thread_id = 4;
+	string msgcontent = 5;
+}
+
 message AuthFriendReq{
 	int32 fromuid = 1;
 	int32 touid = 2;
+	repeated AddFriendMsg textmsgs = 3;
 }
 
 message AuthFriendRsp{
@@ -98,8 +110,10 @@ message TextChatMsgReq {
 }
 
 message TextChatData{
-	string msgid = 1;
-	string msgcontent = 2;
+	string unique_id = 1;
+	int32 msg_id = 2;
+	int32 thread_id = 3;
+	string msgcontent = 4;
 }
 
 message TextChatMsgRsp {
@@ -109,10 +123,20 @@ message TextChatMsgRsp {
 	repeated TextChatData textmsgs = 4;
 }
 
+message KickUserReq{
+	int32 uid = 1;
+}
+
+message KickUserRsp{
+	int32 error = 1;
+	int32 uid = 2;
+}
+
 service ChatService {
 	rpc NotifyAddFriend(AddFriendReq) returns (AddFriendRsp) {}
 	rpc RplyAddFriend(RplyFriendReq) returns (RplyFriendRsp) {}
 	rpc SendChatMsg(SendChatMsgReq) returns (SendChatMsgRsp) {}
 	rpc NotifyAuthFriend(AuthFriendReq) returns (AuthFriendRsp) {}
 	rpc NotifyTextChatMsg(TextChatMsgReq) returns (TextChatMsgRsp){}
+	rpc NotifyKickUser(KickUserReq) returns (KickUserRsp){}
 }

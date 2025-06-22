@@ -82,6 +82,16 @@ Status ChatServiceImpl::NotifyAuthFriend(ServerContext* context, const AuthFrien
 		rtvalue["error"] = ErrorCodes::UidInvalid;
 	}
 
+	for(auto& msg : request->textmsgs()) {
+		Json::Value  chat;
+		chat["sender"] = msg.sender_id();
+		chat["msg_id"] = msg.msg_id();
+		chat["thread_id"] = msg.thread_id();
+		chat["unique_id"] = msg.unique_id();
+		chat["msg_content"] = msg.msgcontent();
+		rtvalue["chat_datas"].append(chat);
+	}
+
 	std::string return_str = rtvalue.toStyledString();
 
 	session->Send(return_str, ID_NOTIFY_AUTH_FRIEND_REQ);
@@ -111,7 +121,9 @@ Status ChatServiceImpl::NotifyTextChatMsg(::grpc::ServerContext* context,
 	for (auto& msg : request->textmsgs()) {
 		Json::Value element;
 		element["content"] = msg.msgcontent();
-		element["msgid"] = msg.msgid();
+		element["unique_id"] = msg.unique_id();
+		element["msg_id"] = msg.msg_id();
+		element["thread_id"] = msg.thread_id();
 		text_array.append(element);
 	}
 	rtvalue["text_array"] = text_array;

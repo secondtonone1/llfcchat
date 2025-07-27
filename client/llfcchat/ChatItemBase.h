@@ -15,7 +15,7 @@ public:
     void setUserName(const QString &name);
     void setUserIcon(const QPixmap &icon);
     void setWidget(QWidget *w);
-    void setStaus(int status);
+    void setStatus(int status);
 private:
     ChatRole m_role;
     QLabel *m_pNameLabel;

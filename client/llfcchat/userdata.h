@@ -127,9 +127,11 @@ struct UserInfo {
 class ChatDataBase {
 public:
     ChatDataBase(int msg_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,
-        QString content,int _send_uid);
+        QString content,int _send_uid, int status, QString chat_time );
     ChatDataBase(QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,
-        QString content, int send_uid);
+        QString content, int send_uid, int status, QString chat_time);
+    ChatDataBase(int msg_id, QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,
+        QString content, int send_uid, int status, QString chat_time);
     int GetMsgId() { return _msg_id; }
     int GetThreadId() { return _thread_id; }
     ChatFormType GetFormType() { return _form_type; }
@@ -139,6 +141,9 @@ public:
     QString GetMsgContent(){return _content;}
     void SetUniqueId(int unique_id);
     QString GetUniqueId();
+    int GetStatus() { return _status; }
+    void SetMsgId(int msg_id) { _msg_id = msg_id; }
+    void SetStatus(int status) { _status = status; }
 private:
     //客户端本地唯一标识
     QString _unique_id;
@@ -153,23 +158,34 @@ private:
     QString _content;
     //发送者id
     int _send_uid;
+    //状态
+    int _status;
+    //聊天时间
+    QString _chat_time;
 };
 
 class TextChatData : public ChatDataBase {
 public:
 
     TextChatData(int msg_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,  QString content,
-        int send_uid):
-        ChatDataBase(msg_id, thread_id, form_type, msg_type, content, send_uid)
+        int send_uid, int status, QString chat_time="") :
+        ChatDataBase(msg_id, thread_id, form_type, msg_type, content, send_uid, status, chat_time)
     {
         
     }
 
     TextChatData(QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type, QString content,
-        int send_uid):
-        ChatDataBase(unique_id, thread_id, form_type, msg_type, content, send_uid)
+        int send_uid, int status, QString chat_time="") :
+        ChatDataBase(unique_id, thread_id, form_type, msg_type, content, send_uid, status, chat_time)
     {
         
+    }
+
+    TextChatData(int msg_id, QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type, QString content,
+        int send_uid, int status, QString chat_time = "") :
+        ChatDataBase(unique_id, thread_id, form_type, msg_type, content, send_uid, status, chat_time)
+    {
+
     }
 
 };
@@ -188,6 +204,7 @@ public:
     ChatThreadData(int other_id, int thread_id, int last_msg_id):
         _other_id(other_id), _thread_id(thread_id), _last_msg_id(last_msg_id){}
     void AddMsg(std::shared_ptr<ChatDataBase> msg);
+    void MoveMsg(std::shared_ptr<ChatDataBase> msg);
     void SetLastMsgId(int msg_id);
     void SetOtherId(int other_id);
     int  GetOtherId();
@@ -197,6 +214,9 @@ public:
     QMap<int, std::shared_ptr<ChatDataBase>>&  GetMsgMapRef();
     void AppendMsg(int msg_id, std::shared_ptr<ChatDataBase> base_msg);
     QString GetLastMsg();
+    int GetLastMsgId();
+    QMap<QString, std::shared_ptr<ChatDataBase>>& GetMsgUnRspRef();
+    void AppendUnRspMsg(QString unique_id, std::shared_ptr<ChatDataBase> base_msg);
 private:
     //如果是私聊，则为对方的id；如果是群聊，则为0
     int _other_id;
@@ -209,6 +229,9 @@ private:
     QString _group_name;
     //缓存消息map，抽象为基类，因为会有图片等其他类型消息
     QMap<int, std::shared_ptr<ChatDataBase>>  _msg_map;
+    //缓存未回复的消息
+        //已发送的消息，还未收到回应的。
+    QMap<QString, std::shared_ptr<ChatDataBase>> _msg_unrsp_map;
 };
 
 

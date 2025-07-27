@@ -143,7 +143,7 @@ std::vector<std::shared_ptr<UserInfo>> UserMgr::GetConListPerPage() {
 }
 
 
-UserMgr::UserMgr():_user_info(nullptr), _chat_loaded(0),_contact_loaded(0), _last_chat_thread_id(0)
+UserMgr::UserMgr():_user_info(nullptr), _chat_loaded(0),_contact_loaded(0), _last_chat_thread_id(0),_cur_load_chat_index(0)
 {
 
 }
@@ -255,6 +255,8 @@ void UserMgr::AddChatThreadData(std::shared_ptr<ChatThreadData> chat_thread_data
 {
     //建立会话id到数据的映射关系
     _chat_map[chat_thread_data->GetThreadId()] = chat_thread_data; 
+    //存储会话列表
+    _chat_thread_ids.push_back(chat_thread_data->GetThreadId());
     if (other_uid) {
         //将对方uid和会话id关联
         _uid_to_thread_id[other_uid] = chat_thread_data->GetThreadId();
@@ -271,18 +273,58 @@ int UserMgr::GetThreadIdByUid(int uid)
    return iter.value();
 }
 
-std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByUid(int uid)
+std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByThreadId(int thread_id)
 {
-    auto find_iter = _chat_map.find(uid);
+    auto find_iter = _chat_map.find(thread_id);
     if (find_iter != _chat_map.end()) {
         return find_iter.value();
     }
     return nullptr;
 }
 
-void UserMgr::AddMsgUnRsp(std::shared_ptr<TextChatData> msg)
-{
-    _msg_unrsp_map.insert(msg->GetUniqueId(), msg);
+std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByUid(int uid) {
+    auto iter = _uid_to_thread_id.find(uid);
+    if (iter == _uid_to_thread_id.end()) {
+        return nullptr;
+    }
+
+    auto chat_iter = _chat_map.find(iter.value());
+    if(chat_iter == _chat_map.end()) {
+        return nullptr;
+    }
+
+    return chat_iter.value();
 }
+
+
+
+std::shared_ptr<ChatThreadData> UserMgr::GetCurLoadData()
+{
+    if (_cur_load_chat_index >= _chat_thread_ids.size()) {
+        return nullptr;
+    }
+
+    auto iter = _chat_map.find(_chat_thread_ids[_cur_load_chat_index]);
+    if (iter == _chat_map.end()) {
+        return nullptr;
+    }
+
+    return iter.value();
+}
+
+std::shared_ptr<ChatThreadData> UserMgr::GetNextLoadData() {
+    _cur_load_chat_index++;
+    if (_cur_load_chat_index >= _chat_thread_ids.size()) {
+        return nullptr;
+    }
+
+    auto iter = _chat_map.find(_chat_thread_ids[_cur_load_chat_index]);
+    if (iter == _chat_map.end()) {
+        return nullptr;
+    }
+
+    return iter.value();
+}
+
 
 

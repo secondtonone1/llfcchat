@@ -1,4 +1,6 @@
 #include "global.h"
+#include <QEventLoop>
+#include <QTimer>
 
 std::function<void(QWidget*)> repolish =[](QWidget *w){
     w->style()->unpolish(w);
@@ -19,3 +21,9 @@ std::function<QString(QString)> xorString = [](QString input){
 
 QString gate_url_prefix = "";
 
+void delay_run(int msecs) {
+    QEventLoop loop;
+    // singleShot 到时后会触发 loop.quit()，从而退出事件循环
+    QTimer::singleShot(msecs, &loop, &QEventLoop::quit);
+    loop.exec();
+}

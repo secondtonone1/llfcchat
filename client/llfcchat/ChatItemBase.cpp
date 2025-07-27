@@ -71,7 +71,7 @@ void ChatItemBase::setWidget(QWidget *w)
    m_pBubble = w;
 }
 
-void ChatItemBase::setStaus(int status)
+void ChatItemBase::setStatus(int status)
 {
     if(status == MsgStatus::UN_READ){
         m_pStatusLabel->setPixmap(QPixmap(":/res/unread.png"));

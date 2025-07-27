@@ -19,6 +19,12 @@ extern std::function<void(QWidget*)> repolish;
 
 extern std::function<QString(QString)> xorString;
 
+/*
+* @brief 延迟执行
+*/
+
+extern void delay_run(int msecs);
+
 enum ReqId{
     ID_GET_VARIFY_CODE = 1001, //获取验证码
     ID_REG_USER = 1002, //注册用户
@@ -44,6 +50,8 @@ enum ReqId{
     ID_LOAD_CHAT_THREAD_RSP = 1026,      //加载聊天线程回复
     ID_CREATE_PRIVATE_CHAT_REQ = 1027, //创建私聊请求
     ID_CREATE_PRIVATE_CHAT_RSP = 1028, //创建私聊回复
+    ID_LOAD_CHAT_MSG_REQ = 1029,      //加载聊天消息
+    ID_LOAD_CHAT_MSG_RSP = 1030,      //加载聊天消息
 };
 
 enum ErrorCodes{

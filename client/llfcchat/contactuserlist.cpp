@@ -141,10 +141,11 @@ bool ContactUserList::eventFilter(QObject *watched, QEvent *event)
 
             _load_pending = true;
 
-            QTimer::singleShot(100, [this](){
+            QTimer::singleShot(100, [this]() {
+
                 _load_pending = false;
-                QCoreApplication::quit(); // 完成后退出应用程序
-                });
+             });
+
             // 滚动到底部，加载新的联系人
             qDebug()<<"load more contact user";
             //发送信号通知聊天界面加载更多聊天内容

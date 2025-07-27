@@ -35,13 +35,16 @@ public:
     void AddFriend(std::shared_ptr<AuthRsp> auth_rsp);
     void AddFriend(std::shared_ptr<AuthInfo> auth_info);
     std::shared_ptr<UserInfo> GetFriendById(int uid);
-    void AppendFriendChatMsg(int friend_id,std::vector<std::shared_ptr<TextChatData>>);
     int GetLastChatThreadId();
     void SetLastChatThreadId(int id);
     void AddChatThreadData(std::shared_ptr<ChatThreadData> chat_thread_data, int other_uid);
     int GetThreadIdByUid(int uid);
+    std::shared_ptr<ChatThreadData> GetChatThreadByThreadId(int thread_id);
     std::shared_ptr<ChatThreadData> GetChatThreadByUid(int uid);
-    void AddMsgUnRsp(std::shared_ptr<TextChatData> msg);
+
+    //获取当前正在加载的聊天数据。
+    std::shared_ptr<ChatThreadData> GetCurLoadData();
+    std::shared_ptr<ChatThreadData> GetNextLoadData();
 private:
     UserMgr();
     std::shared_ptr<UserInfo> _user_info;
@@ -53,11 +56,15 @@ private:
     int _contact_loaded;
     //建立会话id到数据的映射关系
     QMap<int, std::shared_ptr<ChatThreadData>> _chat_map;
+    //聊天会话id列表
+    std::vector<int> _chat_thread_ids;
+    //记录已经加载聊天列表的会话索引
+    int _cur_load_chat_index;
+    //上次会话的id
     int _last_chat_thread_id;
     //缓存其他用户uid和聊天的thread_id的映射关系。
     QMap<int, int> _uid_to_thread_id;
-    //已发送的消息，还未收到回应的。
-    QMap<QString, std::shared_ptr<TextChatData>> _msg_unrsp_map;
+
 public slots:
     void SlotAddFriendRsp(std::shared_ptr<AuthRsp> rsp);
     void SlotAddFriendAuth(std::shared_ptr<AuthInfo> auth);

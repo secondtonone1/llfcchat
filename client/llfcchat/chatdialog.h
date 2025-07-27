@@ -23,6 +23,7 @@ public:
     explicit ChatDialog(QWidget *parent = nullptr);
     ~ChatDialog();
     void loadChatList();
+    void loadChatMsg();
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override ;
 
@@ -52,6 +53,8 @@ private:
     int _cur_chat_thread_id;
     QTimer * _timer;
     LoadingDlg* _loading_dlg;
+    std::shared_ptr<ChatThreadData> _cur_load_chat;
+ 
 public slots:
     void slot_loading_chat_user();
     void slot_side_chat();
@@ -74,6 +77,11 @@ public slots:
         std::vector<std::shared_ptr<ChatThreadInfo>> chat_threads);
 
     void slot_create_private_chat(int uid, int other_id, int thread_id);
+
+    void slot_load_chat_msg(int thread_id, int msg_id, bool load_more, 
+        std::vector<std::shared_ptr<TextChatData>> msglists);
+
+    void slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<TextChatData>> msglists);
 private slots:
 
 };

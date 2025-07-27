@@ -11,6 +11,10 @@
 #include <memory>
 #include <queue>
 #include <mutex>
+#include "message.pb.h"
+using message::AddFriendMsg;
+using message::TextChatData;
+
 class SqlConnection {
 public:
 	SqlConnection(sql::Connection* con, int64_t lasttime):_con(con), _last_oper_time(lasttime){}
@@ -39,10 +43,9 @@ public:
 				int count = 0;
 				while (!b_stop_) {
 					if (count >= 60) {
+						count = 0;
 						checkConnectionPro();
-						count = 0;			
 					}
-		
 					std::this_thread::sleep_for(std::chrono::seconds(1));
 					count++;
 				}
@@ -53,42 +56,6 @@ public:
 		catch (sql::SQLException& e) {
 			// 处理异常
 			std::cout << "mysql pool init failed, error is " << e.what()<< std::endl;
-		}
-	}
-
-	void checkConnection() {
-		std::lock_guard<std::mutex> guard(mutex_);
-		int poolsize = pool_.size();
-		// 获取当前时间戳
-		auto currentTime = std::chrono::system_clock::now().time_since_epoch();
-		// 将时间戳转换为秒
-		long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(currentTime).count();
-		for (int i = 0; i < poolsize; i++) {
-			auto con = std::move(pool_.front());
-			pool_.pop();
-			Defer defer([this, &con]() {
-				pool_.push(std::move(con));
-			});
-
-			if (timestamp - con->_last_oper_time < 5) {
-				continue;
-			}
-			
-			try {
-				std::unique_ptr<sql::Statement> stmt(con->_con->createStatement());
-				stmt->executeQuery("SELECT 1");
-				con->_last_oper_time = timestamp;
-				//std::cout << "execute timer alive query , cur is " << timestamp << std::endl;
-			}
-			catch (sql::SQLException& e) {
-				std::cout << "Error keeping connection alive: " << e.what() << std::endl;
-				// 重新创建连接并替换旧的连接
-				sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
-				auto* newcon = driver->connect(url_, user_, pass_);
-				newcon->setSchema(schema_);
-				con->_con.reset(newcon);
-				con->_last_oper_time = timestamp;
-			}
 		}
 	}
 
@@ -127,14 +94,14 @@ public:
 					con->_last_oper_time = timestamp;
 				}
 				catch (sql::SQLException& e) {
-						std::cout << "Error keeping connection alive: " << e.what() << std::endl;
-						healthy = false;
-						_fail_count++;
+					std::cout << "Error keeping connection alive: " << e.what() << std::endl;
+					healthy = false;
+					_fail_count++;
 				}
-		
+
 			}
 
-			if(healthy)
+			if (healthy)
 			{
 				std::lock_guard<std::mutex> guard(mutex_);
 				pool_.push(std::move(con));
@@ -167,13 +134,50 @@ public:
 				std::lock_guard<std::mutex> guard(mutex_);
 				pool_.push(std::move(newCon));
 			}
-
 			std::cout << "mysql connection reconnect success" << std::endl;
 			return true;
 
-		}catch(sql::SQLException& e) {
-			std::cout <<"Reconnect failed, error is " << e.what() << std::endl;
+		}
+		catch (sql::SQLException& e) {
+			std::cout << "Reconnect failed, error is " << e.what() << std::endl;
 			return false;
+		}
+	}
+
+
+	void checkConnection() {
+		std::lock_guard<std::mutex> guard(mutex_);
+		int poolsize = pool_.size();
+		// 获取当前时间戳
+		auto currentTime = std::chrono::system_clock::now().time_since_epoch();
+		// 将时间戳转换为秒
+		long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(currentTime).count();
+		for (int i = 0; i < poolsize; i++) {
+			auto con = std::move(pool_.front());
+			pool_.pop();
+			Defer defer([this, &con]() {
+				pool_.push(std::move(con));
+			});
+
+			if (timestamp - con->_last_oper_time < 5) {
+				continue;
+			}
+			
+			try {
+				std::unique_ptr<sql::Statement> stmt(con->_con->createStatement());
+				stmt->executeQuery("SELECT 1");
+				con->_last_oper_time = timestamp;
+				//std::cout << "execute timer alive query , cur is " << timestamp << std::endl;
+			}
+			catch (sql::SQLException& e) {
+				std::cout << "Error keeping connection alive: " << e.what() << std::endl;
+				// 重新创建连接并替换旧的连接
+				sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
+				auto* newcon = driver->connect(url_, user_, pass_);
+				newcon->setSchema(schema_);
+				con->_con.reset(newcon);
+				con->_last_oper_time = timestamp;
+			}
 		}
 	}
 
@@ -238,13 +242,23 @@ public:
 	bool CheckEmail(const std::string& name, const std::string & email);
 	bool UpdatePwd(const std::string& name, const std::string& newpwd);
 	bool CheckPwd(const std::string& name, const std::string& pwd, UserInfo& userInfo);
-	bool AddFriendApply(const int& from, const int& to);
+	bool AddFriendApply(const int& from, const int& to, const std::string& desc, const std::string& back_name);
 	bool AuthFriendApply(const int& from, const int& to);
-	bool AddFriend(const int& from, const int& to, std::string back_name);
+	bool AddFriend(const int& from, const int& to, std::string back_name, std::vector<std::shared_ptr<AddFriendMsg>> &chat_datas);
 	std::shared_ptr<UserInfo> GetUser(int uid);
 	std::shared_ptr<UserInfo> GetUser(std::string name);
 	bool GetApplyList(int touid, std::vector<std::shared_ptr<ApplyInfo>>& applyList, int offset, int limit );
 	bool GetFriendList(int self_id, std::vector<std::shared_ptr<UserInfo> >& user_info);
+	bool GetUserThreads(
+		int64_t userId,
+		int64_t lastId,
+		int      pageSize,
+		std::vector<std::shared_ptr<ChatThreadInfo>>& threads,
+		bool& loadMore,
+		int& nextLastId);
+	bool CreatePrivateChat(int user1_id, int user2_id, int& thread_id);
+	std::shared_ptr<PageResult> LoadChatMsg(int threadId, int lastId, int pageSize);
+	bool AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas);
 private:
 	std::unique_ptr<MySqlPool> pool_;
 };

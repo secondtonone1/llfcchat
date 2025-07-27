@@ -382,7 +382,7 @@ bool MysqlDao::AddFriend(const int& from, const int& to, std::string back_name,
 			msgStmt->setInt(2, to);
 			msgStmt->setInt(3, from);
 			msgStmt->setString(4, apply_desc);
-			msgStmt->setInt(5, 0);
+			msgStmt->setInt(5, 2);
 			if (msgStmt->executeUpdate() < 0) { return false; }
 
 			std::unique_ptr<sql::Statement> stmt(con->_con->createStatement());
@@ -397,6 +397,7 @@ bool MysqlDao::AddFriend(const int& from, const int& to, std::string back_name,
 				tx_data->set_msgcontent(apply_desc);
 				tx_data->set_thread_id(threadId);
 				tx_data->set_unique_id("");
+				tx_data->set_status(2);
 				std::cout << "addfriend insert message success" << std::endl;
 				chat_datas.push_back(tx_data);
 			}
@@ -415,7 +416,7 @@ bool MysqlDao::AddFriend(const int& from, const int& to, std::string back_name,
 			msgStmt->setInt(3, to);
 			msgStmt->setString(4, "We are friends now!");
 
-			msgStmt->setInt(5, 0);
+			msgStmt->setInt(5, 2);
 
 			if (msgStmt->executeUpdate() < 0) { return false; }
 
@@ -431,6 +432,7 @@ bool MysqlDao::AddFriend(const int& from, const int& to, std::string back_name,
 				tx_data->set_msgcontent("We are friends now!");
 				tx_data->set_thread_id(threadId);
 				tx_data->set_unique_id("");
+				tx_data->set_status(2);
 				chat_datas.push_back(tx_data);
 			}
 			else {
@@ -795,3 +797,127 @@ bool MysqlDao::CreatePrivateChat(int user1_id, int user2_id, int& thread_id)
 	return false;
 }
 
+std::shared_ptr<PageResult> MysqlDao::LoadChatMsg(int thread_id, int last_message_id, int page_size)
+{
+	auto con = pool_->getConnection();
+	if (!con) {
+		return nullptr;
+	}
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+	auto& conn = con->_con;
+
+
+	try {
+		auto page_res = std::make_shared<PageResult>();
+		page_res->load_more = false;
+		page_res->next_cursor = last_message_id;
+
+		// SQL：多取一条，用于判断是否还有更多
+		const std::string sql = R"(
+        SELECT message_id, thread_id, sender_id, recv_id, content,
+               created_at, updated_at, status
+        FROM chat_message
+        WHERE thread_id = ?
+          AND message_id > ?
+        ORDER BY message_id ASC
+        LIMIT ?
+		)";
+
+		uint32_t fetch_limit = page_size + 1;
+		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
+			conn->prepareStatement(sql)
+			);
+		pstmt->setInt(1, thread_id);
+		pstmt->setInt(2, last_message_id);
+		pstmt->setInt(3, fetch_limit);
+
+		auto rs = std::unique_ptr<sql::ResultSet>(pstmt->executeQuery());
+
+		// 读取 fetch_limit 条记录
+		while (rs->next()) {
+			ChatMessage msg;
+			msg.message_id = rs->getUInt64("message_id");
+			msg.thread_id = rs->getUInt64("thread_id");
+			msg.sender_id = rs->getUInt64("sender_id");
+			msg.recv_id = rs->getUInt64("recv_id");
+			msg.content = rs->getString("content");
+			msg.chat_time = rs->getString("created_at");
+			msg.status = rs->getInt("status");
+			page_res->messages.push_back(std::move(msg));
+		}
+
+		return page_res;
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "SQLException: " << e.what() << std::endl;
+		conn->rollback();
+		return nullptr;
+	}
+	return nullptr;
+
+}
+
+
+bool MysqlDao::AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas) {
+	auto con = pool_->getConnection();
+	if (!con) {
+		return false;
+	}
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+	auto& conn = con->_con;
+
+
+	try {
+		//关闭自动提交，以手动管理事务
+		conn->setAutoCommit(false);
+		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
+			conn->prepareStatement(
+				"INSERT INTO chat_message "
+				"(thread_id, sender_id, recv_id, content, created_at, updated_at, status) "
+				"VALUES (?, ?, ?, ?, ?, ?, ?)"
+			)
+		);
+
+		for (auto& msg : chat_datas) {
+			// 普通字段
+			pstmt->setUInt64(1, msg->thread_id);
+			pstmt->setUInt64(2, msg->sender_id);
+			pstmt->setUInt64(3, msg->recv_id);
+			pstmt->setString(4, msg->content);
+
+			pstmt->setString(5, msg->chat_time);  // created_at
+			pstmt->setString(6, msg->chat_time);  // updated_at
+
+			pstmt->setInt(7, msg->status);
+			pstmt->executeUpdate();
+
+			// 2. 取 LAST_INSERT_ID()
+			std::unique_ptr<sql::Statement> keyStmt(
+				conn->createStatement()
+			);
+			std::unique_ptr<sql::ResultSet> rs(
+				keyStmt->executeQuery("SELECT LAST_INSERT_ID()")
+			);
+			if (rs->next()) {
+				msg->message_id = rs->getUInt64(1);
+			}
+			else {
+				continue;
+			}
+		}
+
+		conn->commit();
+		return true;
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "SQLException: " << e.what() << std::endl;
+		conn->rollback();
+		return false;
+	}
+	return true;
+
+}

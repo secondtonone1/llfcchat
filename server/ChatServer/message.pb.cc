@@ -492,6 +492,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_message_2eproto::offsets[] PRO
   PROTOBUF_FIELD_OFFSET(::message::AddFriendMsg, msg_id_),
   PROTOBUF_FIELD_OFFSET(::message::AddFriendMsg, thread_id_),
   PROTOBUF_FIELD_OFFSET(::message::AddFriendMsg, msgcontent_),
+  PROTOBUF_FIELD_OFFSET(::message::AddFriendMsg, status_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::message::AuthFriendReq, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -515,6 +516,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_message_2eproto::offsets[] PRO
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgReq, fromuid_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgReq, touid_),
+  PROTOBUF_FIELD_OFFSET(::message::TextChatMsgReq, thread_id_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgReq, textmsgs_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::message::TextChatData, _internal_metadata_),
@@ -523,8 +525,8 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_message_2eproto::offsets[] PRO
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::message::TextChatData, unique_id_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatData, msg_id_),
-  PROTOBUF_FIELD_OFFSET(::message::TextChatData, thread_id_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatData, msgcontent_),
+  PROTOBUF_FIELD_OFFSET(::message::TextChatData, chat_time_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -533,6 +535,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_message_2eproto::offsets[] PRO
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, error_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, fromuid_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, touid_),
+  PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, thread_id_),
   PROTOBUF_FIELD_OFFSET(::message::TextChatMsgRsp, textmsgs_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::message::KickUserReq, _internal_metadata_),
@@ -562,13 +565,13 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 80, -1, sizeof(::message::SendChatMsgReq)},
   { 88, -1, sizeof(::message::SendChatMsgRsp)},
   { 96, -1, sizeof(::message::AddFriendMsg)},
-  { 106, -1, sizeof(::message::AuthFriendReq)},
-  { 114, -1, sizeof(::message::AuthFriendRsp)},
-  { 122, -1, sizeof(::message::TextChatMsgReq)},
-  { 130, -1, sizeof(::message::TextChatData)},
-  { 139, -1, sizeof(::message::TextChatMsgRsp)},
-  { 148, -1, sizeof(::message::KickUserReq)},
-  { 154, -1, sizeof(::message::KickUserRsp)},
+  { 107, -1, sizeof(::message::AuthFriendReq)},
+  { 115, -1, sizeof(::message::AuthFriendRsp)},
+  { 123, -1, sizeof(::message::TextChatMsgReq)},
+  { 132, -1, sizeof(::message::TextChatData)},
+  { 141, -1, sizeof(::message::TextChatMsgRsp)},
+  { 151, -1, sizeof(::message::KickUserReq)},
+  { 157, -1, sizeof(::message::KickUserRsp)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -614,38 +617,40 @@ const char descriptor_table_protodef_message_2eproto[] PROTOBUF_SECTION_VARIABLE
   "hatMsgReq\022\017\n\007fromuid\030\001 \001(\005\022\r\n\005touid\030\002 \001("
   "\005\022\017\n\007message\030\003 \001(\t\"\?\n\016SendChatMsgRsp\022\r\n\005"
   "error\030\001 \001(\005\022\017\n\007fromuid\030\002 \001(\005\022\r\n\005touid\030\003 "
-  "\001(\005\"k\n\014AddFriendMsg\022\021\n\tsender_id\030\001 \001(\005\022\021"
+  "\001(\005\"{\n\014AddFriendMsg\022\021\n\tsender_id\030\001 \001(\005\022\021"
   "\n\tunique_id\030\002 \001(\t\022\016\n\006msg_id\030\003 \001(\005\022\021\n\tthr"
-  "ead_id\030\004 \001(\005\022\022\n\nmsgcontent\030\005 \001(\t\"X\n\rAuth"
-  "FriendReq\022\017\n\007fromuid\030\001 \001(\005\022\r\n\005touid\030\002 \001("
-  "\005\022\'\n\010textmsgs\030\003 \003(\0132\025.message.AddFriendM"
-  "sg\">\n\rAuthFriendRsp\022\r\n\005error\030\001 \001(\005\022\017\n\007fr"
-  "omuid\030\002 \001(\005\022\r\n\005touid\030\003 \001(\005\"Y\n\016TextChatMs"
-  "gReq\022\017\n\007fromuid\030\001 \001(\005\022\r\n\005touid\030\002 \001(\005\022\'\n\010"
-  "textmsgs\030\003 \003(\0132\025.message.TextChatData\"X\n"
-  "\014TextChatData\022\021\n\tunique_id\030\001 \001(\t\022\016\n\006msg_"
-  "id\030\002 \001(\005\022\021\n\tthread_id\030\003 \001(\005\022\022\n\nmsgconten"
-  "t\030\004 \001(\t\"h\n\016TextChatMsgRsp\022\r\n\005error\030\001 \001(\005"
-  "\022\017\n\007fromuid\030\002 \001(\005\022\r\n\005touid\030\003 \001(\005\022\'\n\010text"
-  "msgs\030\004 \003(\0132\025.message.TextChatData\"\032\n\013Kic"
-  "kUserReq\022\013\n\003uid\030\001 \001(\005\")\n\013KickUserRsp\022\r\n\005"
-  "error\030\001 \001(\005\022\013\n\003uid\030\002 \001(\0052P\n\rVarifyServic"
-  "e\022\?\n\rGetVarifyCode\022\025.message.GetVarifyRe"
-  "q\032\025.message.GetVarifyRsp\"\0002\207\001\n\rStatusSer"
-  "vice\022G\n\rGetChatServer\022\031.message.GetChatS"
-  "erverReq\032\031.message.GetChatServerRsp\"\000\022-\n"
-  "\005Login\022\021.message.LoginReq\032\021.message.Logi"
-  "nRsp2\245\003\n\013ChatService\022A\n\017NotifyAddFriend\022"
-  "\025.message.AddFriendReq\032\025.message.AddFrie"
-  "ndRsp\"\000\022A\n\rRplyAddFriend\022\026.message.RplyF"
-  "riendReq\032\026.message.RplyFriendRsp\"\000\022A\n\013Se"
-  "ndChatMsg\022\027.message.SendChatMsgReq\032\027.mes"
-  "sage.SendChatMsgRsp\"\000\022D\n\020NotifyAuthFrien"
-  "d\022\026.message.AuthFriendReq\032\026.message.Auth"
-  "FriendRsp\"\000\022G\n\021NotifyTextChatMsg\022\027.messa"
-  "ge.TextChatMsgReq\032\027.message.TextChatMsgR"
-  "sp\"\000\022>\n\016NotifyKickUser\022\024.message.KickUse"
-  "rReq\032\024.message.KickUserRsp\"\000b\006proto3"
+  "ead_id\030\004 \001(\005\022\022\n\nmsgcontent\030\005 \001(\t\022\016\n\006stat"
+  "us\030\006 \001(\005\"X\n\rAuthFriendReq\022\017\n\007fromuid\030\001 \001"
+  "(\005\022\r\n\005touid\030\002 \001(\005\022\'\n\010textmsgs\030\003 \003(\0132\025.me"
+  "ssage.AddFriendMsg\">\n\rAuthFriendRsp\022\r\n\005e"
+  "rror\030\001 \001(\005\022\017\n\007fromuid\030\002 \001(\005\022\r\n\005touid\030\003 \001"
+  "(\005\"l\n\016TextChatMsgReq\022\017\n\007fromuid\030\001 \001(\005\022\r\n"
+  "\005touid\030\002 \001(\005\022\021\n\tthread_id\030\003 \001(\005\022\'\n\010textm"
+  "sgs\030\004 \003(\0132\025.message.TextChatData\"X\n\014Text"
+  "ChatData\022\021\n\tunique_id\030\001 \001(\t\022\016\n\006msg_id\030\002 "
+  "\001(\005\022\022\n\nmsgcontent\030\003 \001(\t\022\021\n\tchat_time\030\004 \001"
+  "(\t\"{\n\016TextChatMsgRsp\022\r\n\005error\030\001 \001(\005\022\017\n\007f"
+  "romuid\030\002 \001(\005\022\r\n\005touid\030\003 \001(\005\022\021\n\tthread_id"
+  "\030\004 \001(\005\022\'\n\010textmsgs\030\005 \003(\0132\025.message.TextC"
+  "hatData\"\032\n\013KickUserReq\022\013\n\003uid\030\001 \001(\005\")\n\013K"
+  "ickUserRsp\022\r\n\005error\030\001 \001(\005\022\013\n\003uid\030\002 \001(\0052P"
+  "\n\rVarifyService\022\?\n\rGetVarifyCode\022\025.messa"
+  "ge.GetVarifyReq\032\025.message.GetVarifyRsp\"\000"
+  "2\207\001\n\rStatusService\022G\n\rGetChatServer\022\031.me"
+  "ssage.GetChatServerReq\032\031.message.GetChat"
+  "ServerRsp\"\000\022-\n\005Login\022\021.message.LoginReq\032"
+  "\021.message.LoginRsp2\245\003\n\013ChatService\022A\n\017No"
+  "tifyAddFriend\022\025.message.AddFriendReq\032\025.m"
+  "essage.AddFriendRsp\"\000\022A\n\rRplyAddFriend\022\026"
+  ".message.RplyFriendReq\032\026.message.RplyFri"
+  "endRsp\"\000\022A\n\013SendChatMsg\022\027.message.SendCh"
+  "atMsgReq\032\027.message.SendChatMsgRsp\"\000\022D\n\020N"
+  "otifyAuthFriend\022\026.message.AuthFriendReq\032"
+  "\026.message.AuthFriendRsp\"\000\022G\n\021NotifyTextC"
+  "hatMsg\022\027.message.TextChatMsgReq\032\027.messag"
+  "e.TextChatMsgRsp\"\000\022>\n\016NotifyKickUser\022\024.m"
+  "essage.KickUserReq\032\024.message.KickUserRsp"
+  "\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_message_2eproto_deps[1] = {
 };
@@ -673,7 +678,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_mes
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_message_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_message_2eproto = {
-  false, false, descriptor_table_protodef_message_2eproto, "message.proto", 2036,
+  false, false, descriptor_table_protodef_message_2eproto, "message.proto", 2090,
   &descriptor_table_message_2eproto_once, descriptor_table_message_2eproto_sccs, descriptor_table_message_2eproto_deps, 20, 0,
   schemas, file_default_instances, TableStruct_message_2eproto::offsets,
   file_level_metadata_message_2eproto, 20, file_level_enum_descriptors_message_2eproto, file_level_service_descriptors_message_2eproto,
@@ -3900,8 +3905,8 @@ AddFriendMsg::AddFriendMsg(const AddFriendMsg& from)
       GetArena());
   }
   ::memcpy(&sender_id_, &from.sender_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&thread_id_) -
-    reinterpret_cast<char*>(&sender_id_)) + sizeof(thread_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&status_) -
+    reinterpret_cast<char*>(&sender_id_)) + sizeof(status_));
   // @@protoc_insertion_point(copy_constructor:message.AddFriendMsg)
 }
 
@@ -3910,8 +3915,8 @@ void AddFriendMsg::SharedCtor() {
   unique_id_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   msgcontent_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&sender_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&thread_id_) -
-      reinterpret_cast<char*>(&sender_id_)) + sizeof(thread_id_));
+      reinterpret_cast<char*>(&status_) -
+      reinterpret_cast<char*>(&sender_id_)) + sizeof(status_));
 }
 
 AddFriendMsg::~AddFriendMsg() {
@@ -3950,8 +3955,8 @@ void AddFriendMsg::Clear() {
   unique_id_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   msgcontent_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::memset(&sender_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&thread_id_) -
-      reinterpret_cast<char*>(&sender_id_)) + sizeof(thread_id_));
+      reinterpret_cast<char*>(&status_) -
+      reinterpret_cast<char*>(&sender_id_)) + sizeof(status_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -3999,6 +4004,13 @@ const char* AddFriendMsg::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_I
           auto str = _internal_mutable_msgcontent();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "message.AddFriendMsg.msgcontent"));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // int32 status = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 48)) {
+          status_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -4068,6 +4080,12 @@ failure:
         5, this->_internal_msgcontent(), target);
   }
 
+  // int32 status = 6;
+  if (this->status() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(6, this->_internal_status(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -4119,6 +4137,13 @@ size_t AddFriendMsg::ByteSizeLong() const {
         this->_internal_thread_id());
   }
 
+  // int32 status = 6;
+  if (this->status() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->_internal_status());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
         _internal_metadata_, total_size, &_cached_size_);
@@ -4165,6 +4190,9 @@ void AddFriendMsg::MergeFrom(const AddFriendMsg& from) {
   if (from.thread_id() != 0) {
     _internal_set_thread_id(from._internal_thread_id());
   }
+  if (from.status() != 0) {
+    _internal_set_status(from._internal_status());
+  }
 }
 
 void AddFriendMsg::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -4191,8 +4219,8 @@ void AddFriendMsg::InternalSwap(AddFriendMsg* other) {
   unique_id_.Swap(&other->unique_id_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   msgcontent_.Swap(&other->msgcontent_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AddFriendMsg, thread_id_)
-      + sizeof(AddFriendMsg::thread_id_)
+      PROTOBUF_FIELD_OFFSET(AddFriendMsg, status_)
+      + sizeof(AddFriendMsg::status_)
       - PROTOBUF_FIELD_OFFSET(AddFriendMsg, sender_id_)>(
           reinterpret_cast<char*>(&sender_id_),
           reinterpret_cast<char*>(&other->sender_id_));
@@ -4741,16 +4769,16 @@ TextChatMsgReq::TextChatMsgReq(const TextChatMsgReq& from)
       textmsgs_(from.textmsgs_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&fromuid_, &from.fromuid_,
-    static_cast<size_t>(reinterpret_cast<char*>(&touid_) -
-    reinterpret_cast<char*>(&fromuid_)) + sizeof(touid_));
+    static_cast<size_t>(reinterpret_cast<char*>(&thread_id_) -
+    reinterpret_cast<char*>(&fromuid_)) + sizeof(thread_id_));
   // @@protoc_insertion_point(copy_constructor:message.TextChatMsgReq)
 }
 
 void TextChatMsgReq::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_TextChatMsgReq_message_2eproto.base);
   ::memset(&fromuid_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&touid_) -
-      reinterpret_cast<char*>(&fromuid_)) + sizeof(touid_));
+      reinterpret_cast<char*>(&thread_id_) -
+      reinterpret_cast<char*>(&fromuid_)) + sizeof(thread_id_));
 }
 
 TextChatMsgReq::~TextChatMsgReq() {
@@ -4786,8 +4814,8 @@ void TextChatMsgReq::Clear() {
 
   textmsgs_.Clear();
   ::memset(&fromuid_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&touid_) -
-      reinterpret_cast<char*>(&fromuid_)) + sizeof(touid_));
+      reinterpret_cast<char*>(&thread_id_) -
+      reinterpret_cast<char*>(&fromuid_)) + sizeof(thread_id_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -4813,16 +4841,23 @@ const char* TextChatMsgReq::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated .message.TextChatData textmsgs = 3;
+      // int32 thread_id = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated .message.TextChatData textmsgs = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(_internal_add_textmsgs(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
         } else goto handle_unusual;
         continue;
       default: {
@@ -4865,12 +4900,18 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->_internal_touid(), target);
   }
 
-  // repeated .message.TextChatData textmsgs = 3;
+  // int32 thread_id = 3;
+  if (this->thread_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(3, this->_internal_thread_id(), target);
+  }
+
+  // repeated .message.TextChatData textmsgs = 4;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->_internal_textmsgs_size()); i < n; i++) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, this->_internal_textmsgs(i), target, stream);
+      InternalWriteMessage(4, this->_internal_textmsgs(i), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -4889,7 +4930,7 @@ size_t TextChatMsgReq::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .message.TextChatData textmsgs = 3;
+  // repeated .message.TextChatData textmsgs = 4;
   total_size += 1UL * this->_internal_textmsgs_size();
   for (const auto& msg : this->textmsgs_) {
     total_size +=
@@ -4908,6 +4949,13 @@ size_t TextChatMsgReq::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
         this->_internal_touid());
+  }
+
+  // int32 thread_id = 3;
+  if (this->thread_id() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->_internal_thread_id());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -4948,6 +4996,9 @@ void TextChatMsgReq::MergeFrom(const TextChatMsgReq& from) {
   if (from.touid() != 0) {
     _internal_set_touid(from._internal_touid());
   }
+  if (from.thread_id() != 0) {
+    _internal_set_thread_id(from._internal_thread_id());
+  }
 }
 
 void TextChatMsgReq::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -4973,8 +5024,8 @@ void TextChatMsgReq::InternalSwap(TextChatMsgReq* other) {
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   textmsgs_.InternalSwap(&other->textmsgs_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TextChatMsgReq, touid_)
-      + sizeof(TextChatMsgReq::touid_)
+      PROTOBUF_FIELD_OFFSET(TextChatMsgReq, thread_id_)
+      + sizeof(TextChatMsgReq::thread_id_)
       - PROTOBUF_FIELD_OFFSET(TextChatMsgReq, fromuid_)>(
           reinterpret_cast<char*>(&fromuid_),
           reinterpret_cast<char*>(&other->fromuid_));
@@ -5012,9 +5063,12 @@ TextChatData::TextChatData(const TextChatData& from)
     msgcontent_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_msgcontent(),
       GetArena());
   }
-  ::memcpy(&msg_id_, &from.msg_id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&thread_id_) -
-    reinterpret_cast<char*>(&msg_id_)) + sizeof(thread_id_));
+  chat_time_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_chat_time().empty()) {
+    chat_time_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_chat_time(),
+      GetArena());
+  }
+  msg_id_ = from.msg_id_;
   // @@protoc_insertion_point(copy_constructor:message.TextChatData)
 }
 
@@ -5022,9 +5076,8 @@ void TextChatData::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_TextChatData_message_2eproto.base);
   unique_id_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   msgcontent_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  ::memset(&msg_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&thread_id_) -
-      reinterpret_cast<char*>(&msg_id_)) + sizeof(thread_id_));
+  chat_time_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  msg_id_ = 0;
 }
 
 TextChatData::~TextChatData() {
@@ -5037,6 +5090,7 @@ void TextChatData::SharedDtor() {
   GOOGLE_DCHECK(GetArena() == nullptr);
   unique_id_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   msgcontent_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  chat_time_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void TextChatData::ArenaDtor(void* object) {
@@ -5062,9 +5116,8 @@ void TextChatData::Clear() {
 
   unique_id_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   msgcontent_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  ::memset(&msg_id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&thread_id_) -
-      reinterpret_cast<char*>(&msg_id_)) + sizeof(thread_id_));
+  chat_time_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  msg_id_ = 0;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -5092,19 +5145,21 @@ const char* TextChatData::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_I
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // int32 thread_id = 3;
+      // string msgcontent = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
-          thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
-        } else goto handle_unusual;
-        continue;
-      // string msgcontent = 4;
-      case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
           auto str = _internal_mutable_msgcontent();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "message.TextChatData.msgcontent"));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // string chat_time = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+          auto str = _internal_mutable_chat_time();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "message.TextChatData.chat_time"));
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -5152,20 +5207,24 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->_internal_msg_id(), target);
   }
 
-  // int32 thread_id = 3;
-  if (this->thread_id() != 0) {
-    target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(3, this->_internal_thread_id(), target);
-  }
-
-  // string msgcontent = 4;
+  // string msgcontent = 3;
   if (this->msgcontent().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_msgcontent().data(), static_cast<int>(this->_internal_msgcontent().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "message.TextChatData.msgcontent");
     target = stream->WriteStringMaybeAliased(
-        4, this->_internal_msgcontent(), target);
+        3, this->_internal_msgcontent(), target);
+  }
+
+  // string chat_time = 4;
+  if (this->chat_time().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_chat_time().data(), static_cast<int>(this->_internal_chat_time().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "message.TextChatData.chat_time");
+    target = stream->WriteStringMaybeAliased(
+        4, this->_internal_chat_time(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5191,11 +5250,18 @@ size_t TextChatData::ByteSizeLong() const {
         this->_internal_unique_id());
   }
 
-  // string msgcontent = 4;
+  // string msgcontent = 3;
   if (this->msgcontent().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_msgcontent());
+  }
+
+  // string chat_time = 4;
+  if (this->chat_time().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_chat_time());
   }
 
   // int32 msg_id = 2;
@@ -5203,13 +5269,6 @@ size_t TextChatData::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
         this->_internal_msg_id());
-  }
-
-  // int32 thread_id = 3;
-  if (this->thread_id() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_thread_id());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5249,11 +5308,11 @@ void TextChatData::MergeFrom(const TextChatData& from) {
   if (from.msgcontent().size() > 0) {
     _internal_set_msgcontent(from._internal_msgcontent());
   }
+  if (from.chat_time().size() > 0) {
+    _internal_set_chat_time(from._internal_chat_time());
+  }
   if (from.msg_id() != 0) {
     _internal_set_msg_id(from._internal_msg_id());
-  }
-  if (from.thread_id() != 0) {
-    _internal_set_thread_id(from._internal_thread_id());
   }
 }
 
@@ -5280,12 +5339,8 @@ void TextChatData::InternalSwap(TextChatData* other) {
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   unique_id_.Swap(&other->unique_id_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   msgcontent_.Swap(&other->msgcontent_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TextChatData, thread_id_)
-      + sizeof(TextChatData::thread_id_)
-      - PROTOBUF_FIELD_OFFSET(TextChatData, msg_id_)>(
-          reinterpret_cast<char*>(&msg_id_),
-          reinterpret_cast<char*>(&other->msg_id_));
+  chat_time_.Swap(&other->chat_time_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  swap(msg_id_, other->msg_id_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata TextChatData::GetMetadata() const {
@@ -5313,16 +5368,16 @@ TextChatMsgRsp::TextChatMsgRsp(const TextChatMsgRsp& from)
       textmsgs_(from.textmsgs_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&error_, &from.error_,
-    static_cast<size_t>(reinterpret_cast<char*>(&touid_) -
-    reinterpret_cast<char*>(&error_)) + sizeof(touid_));
+    static_cast<size_t>(reinterpret_cast<char*>(&thread_id_) -
+    reinterpret_cast<char*>(&error_)) + sizeof(thread_id_));
   // @@protoc_insertion_point(copy_constructor:message.TextChatMsgRsp)
 }
 
 void TextChatMsgRsp::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_TextChatMsgRsp_message_2eproto.base);
   ::memset(&error_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&touid_) -
-      reinterpret_cast<char*>(&error_)) + sizeof(touid_));
+      reinterpret_cast<char*>(&thread_id_) -
+      reinterpret_cast<char*>(&error_)) + sizeof(thread_id_));
 }
 
 TextChatMsgRsp::~TextChatMsgRsp() {
@@ -5358,8 +5413,8 @@ void TextChatMsgRsp::Clear() {
 
   textmsgs_.Clear();
   ::memset(&error_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&touid_) -
-      reinterpret_cast<char*>(&error_)) + sizeof(touid_));
+      reinterpret_cast<char*>(&thread_id_) -
+      reinterpret_cast<char*>(&error_)) + sizeof(thread_id_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -5392,16 +5447,23 @@ const char* TextChatMsgRsp::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated .message.TextChatData textmsgs = 4;
+      // int32 thread_id = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+          thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated .message.TextChatData textmsgs = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 42)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(_internal_add_textmsgs(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<42>(ptr));
         } else goto handle_unusual;
         continue;
       default: {
@@ -5450,12 +5512,18 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(3, this->_internal_touid(), target);
   }
 
-  // repeated .message.TextChatData textmsgs = 4;
+  // int32 thread_id = 4;
+  if (this->thread_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(4, this->_internal_thread_id(), target);
+  }
+
+  // repeated .message.TextChatData textmsgs = 5;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->_internal_textmsgs_size()); i < n; i++) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(4, this->_internal_textmsgs(i), target, stream);
+      InternalWriteMessage(5, this->_internal_textmsgs(i), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5474,7 +5542,7 @@ size_t TextChatMsgRsp::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .message.TextChatData textmsgs = 4;
+  // repeated .message.TextChatData textmsgs = 5;
   total_size += 1UL * this->_internal_textmsgs_size();
   for (const auto& msg : this->textmsgs_) {
     total_size +=
@@ -5500,6 +5568,13 @@ size_t TextChatMsgRsp::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
         this->_internal_touid());
+  }
+
+  // int32 thread_id = 4;
+  if (this->thread_id() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->_internal_thread_id());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5543,6 +5618,9 @@ void TextChatMsgRsp::MergeFrom(const TextChatMsgRsp& from) {
   if (from.touid() != 0) {
     _internal_set_touid(from._internal_touid());
   }
+  if (from.thread_id() != 0) {
+    _internal_set_thread_id(from._internal_thread_id());
+  }
 }
 
 void TextChatMsgRsp::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -5568,8 +5646,8 @@ void TextChatMsgRsp::InternalSwap(TextChatMsgRsp* other) {
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   textmsgs_.InternalSwap(&other->textmsgs_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TextChatMsgRsp, touid_)
-      + sizeof(TextChatMsgRsp::touid_)
+      PROTOBUF_FIELD_OFFSET(TextChatMsgRsp, thread_id_)
+      + sizeof(TextChatMsgRsp::thread_id_)
       - PROTOBUF_FIELD_OFFSET(TextChatMsgRsp, error_)>(
           reinterpret_cast<char*>(&error_),
           reinterpret_cast<char*>(&other->error_));

@@ -89,6 +89,7 @@ message AddFriendMsg{
 	int32 msg_id = 3;
 	int32 thread_id = 4;
 	string msgcontent = 5;
+	int32 status = 6;
 }
 
 message AuthFriendReq{
@@ -106,21 +107,23 @@ message AuthFriendRsp{
 message TextChatMsgReq {
 	int32 fromuid = 1;
     int32 touid = 2;
-	repeated TextChatData textmsgs = 3;
+	int32 thread_id = 3;
+	repeated TextChatData textmsgs = 4;
 }
 
 message TextChatData{
 	string unique_id = 1;
 	int32 msg_id = 2;
-	int32 thread_id = 3;
-	string msgcontent = 4;
+	string msgcontent = 3;
+	string chat_time = 4;
 }
 
 message TextChatMsgRsp {
 	int32 error = 1;
 	int32 fromuid = 2;
 	int32 touid = 3; 
-	repeated TextChatData textmsgs = 4;
+	int32 thread_id = 4;
+	repeated TextChatData textmsgs = 5;
 }
 
 message KickUserReq{

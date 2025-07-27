@@ -77,10 +77,9 @@ void CServer::on_timer(const boost::system::error_code& ec) {
 		std::cout << "timer error: " << ec.message() << std::endl;
 		return;
 	}
-
 	std::vector<std::shared_ptr<CSession>> _expired_sessions;
 	int session_count = 0;
-
+	//此处加锁遍历session
 	std::map<std::string, shared_ptr<CSession>> sessions_copy;
 	{
 		lock_guard<mutex> lock(_mutex);
@@ -99,7 +98,6 @@ void CServer::on_timer(const boost::system::error_code& ec) {
 		}
 		session_count++;
 	}
-
 
 	//设置session数量
 	auto& cfg = ConfigMgr::Inst();

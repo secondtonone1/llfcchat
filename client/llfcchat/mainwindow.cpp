@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(TcpMgr::GetInstance().get(),&TcpMgr::sig_connection_closed, this, &MainWindow::SlotExcepConOffline);
     //测试用
     //emit TcpMgr::GetInstance()->sig_swich_chatdlg();
-
+    //emit _login_dlg->sig_test();
 }
 
 MainWindow::~MainWindow()

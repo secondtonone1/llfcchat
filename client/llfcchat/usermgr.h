@@ -5,6 +5,7 @@
 #include <singleton.h>
 #include "userdata.h"
 #include <vector>
+#include <mutex>
 class UserMgr:public QObject,public Singleton<UserMgr>,
         public std::enable_shared_from_this<UserMgr>
 {
@@ -64,6 +65,8 @@ private:
     int _last_chat_thread_id;
     //缓存其他用户uid和聊天的thread_id的映射关系。
     QMap<int, int> _uid_to_thread_id;
+
+    std::mutex _mtx;
 
 public slots:
     void SlotAddFriendRsp(std::shared_ptr<AuthRsp> rsp);

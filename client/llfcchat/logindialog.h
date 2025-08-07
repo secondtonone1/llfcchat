@@ -39,6 +39,7 @@ signals:
     void switchRegister();
     void switchReset();
     void sig_connect_tcp(ServerInfo);
+    void sig_test();
 };
 
 #endif // LOGINDIALOG_H

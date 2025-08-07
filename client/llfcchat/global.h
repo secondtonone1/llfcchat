@@ -53,6 +53,7 @@ enum ReqId{
     ID_LOAD_CHAT_MSG_REQ = 1029,      //加载聊天消息
     ID_LOAD_CHAT_MSG_RSP = 1030,      //加载聊天消息
 };
+Q_DECLARE_METATYPE(ReqId)
 
 enum ErrorCodes{
     SUCCESS = 0,
@@ -86,11 +87,16 @@ extern QString gate_url_prefix;
 
 
 struct ServerInfo{
+public:
+    ServerInfo() = default;
+    ServerInfo(const ServerInfo& other):Host(other.Host),Port(other.Port),Token(other.Token),Uid(other.Uid){}
     QString Host;
     QString Port;
     QString Token;
     int Uid;
 };
+
+Q_DECLARE_METATYPE(ServerInfo)
 
 enum class ChatRole
 {

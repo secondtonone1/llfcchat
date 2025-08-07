@@ -20,13 +20,16 @@ LoginDialog::LoginDialog(QWidget *parent) :
     //连接登录回包信号
     connect(HttpMgr::GetInstance().get(), &HttpMgr::sig_login_mod_finish, this,
             &LoginDialog::slot_login_mod_finish);
-
     //连接tcp连接请求的信号和槽函数
     connect(this, &LoginDialog::sig_connect_tcp, TcpMgr::GetInstance().get(), &TcpMgr::slot_tcp_connect);
     //连接tcp管理者发出的连接成功信号
     connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_con_success, this, &LoginDialog::slot_tcp_con_finish);
     //连接tcp管理者发出的登陆失败信号
     connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_login_failed, this, &LoginDialog::slot_login_failed);
+
+
+   // connect(this, &LoginDialog::sig_test, TcpMgr::GetInstance().get(), &TcpMgr::slot_test);
+
 
     initHead();
 }
@@ -91,6 +94,8 @@ void LoginDialog::initHttpHandlers()
         qDebug()<< "email is " << email << " uid is " << si.Uid <<" host is "
                 << si.Host << " Port is " << si.Port << " Token is " << si.Token;
         emit sig_connect_tcp(si);
+       // qDebug() << "send thread is " << QThread::currentThread();
+       // emit sig_test();
     });
 }
 

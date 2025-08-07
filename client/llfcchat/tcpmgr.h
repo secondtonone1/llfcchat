@@ -8,6 +8,16 @@
 #include "userdata.h"
 #include <QJsonArray>
 #include <memory>
+#include <QThread>
+#include <QQueue>
+
+class TcpThread:public std::enable_shared_from_this<TcpThread> {
+public:
+    TcpThread();
+    ~TcpThread();
+private:
+    QThread* _tcp_thread;
+};
 
 class TcpMgr:public QObject, public Singleton<TcpMgr>,
         public std::enable_shared_from_this<TcpMgr>
@@ -19,6 +29,7 @@ public:
 private:
     friend class Singleton<TcpMgr>;
     TcpMgr();
+    void registerMetaType();
     void initHandlers();
     void handleMsg(ReqId id, int len, QByteArray data);
     QTcpSocket _socket;
@@ -29,9 +40,21 @@ private:
     quint16 _message_id;
     quint16 _message_len;
     QMap<ReqId, std::function<void(ReqId id, int len, QByteArray data)>> _handlers;
+    //发送队列
+    QQueue<QByteArray> _send_queue;
+    //正在发送的包
+    QByteArray  _current_block;
+    //当前已发送的字节数
+    qint64        _bytes_sent;
+    //是否正在发送
+    bool _pending;
 public slots:
     void slot_tcp_connect(ServerInfo);
     void slot_send_data(ReqId reqId, QByteArray data);
+    void slot_test() {
+        qDebug() << "receve thread is " << QThread::currentThread();
+        qDebug() << "slot test......";
+    }
 signals:
     void sig_con_success(bool bsuccess);
     void sig_send_data(ReqId reqId, QByteArray data);

@@ -8,41 +8,49 @@ UserMgr::~UserMgr()
 }
 
 void UserMgr::SetUserInfo(std::shared_ptr<UserInfo> user_info) {
+    std::lock_guard<std::mutex> lock(_mtx);
     _user_info = user_info;
 }
 
 void UserMgr::SetToken(QString token)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     _token = token;
 }
 
 int UserMgr::GetUid()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info->_uid;
 }
 
 QString UserMgr::GetName()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info->_name;
 }
 
 QString UserMgr::GetNick()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info->_nick;
 }
 
 QString UserMgr::GetIcon()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info->_icon;
 }
 
 QString UserMgr::GetDesc()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info->_desc;
 }
 
 std::shared_ptr<UserInfo> UserMgr::GetUserInfo()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _user_info;
 }
 
@@ -59,6 +67,7 @@ void UserMgr::AppendApplyList(QJsonArray array)
         auto status = value["status"].toInt();
         auto info = std::make_shared<ApplyInfo>(uid, name,
                            desc, icon, nick, sex, status);
+        std::lock_guard<std::mutex> lock(_mtx);
         _apply_list.push_back(info);
     }
 }
@@ -76,6 +85,7 @@ void UserMgr::AppendFriendList(QJsonArray array) {
 
         auto info = std::make_shared<UserInfo>(uid, name,
             nick, icon, sex, desc, back);
+        std::lock_guard<std::mutex> lock(_mtx);
         _friend_list.push_back(info);
         _friend_map.insert(uid, info);
     }
@@ -83,16 +93,19 @@ void UserMgr::AppendFriendList(QJsonArray array) {
 
 std::vector<std::shared_ptr<ApplyInfo> > UserMgr::GetApplyList()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _apply_list;
 }
 
 void UserMgr::AddApplyList(std::shared_ptr<ApplyInfo> app)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     _apply_list.push_back(app);
 }
 
 bool UserMgr::AlreadyApply(int uid)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     for(auto& apply: _apply_list){
         if(apply->_uid == uid){
             return true;
@@ -103,7 +116,7 @@ bool UserMgr::AlreadyApply(int uid)
 }
 
 std::vector<std::shared_ptr<UserInfo>> UserMgr::GetChatListPerPage() {
-    
+    std::lock_guard<std::mutex> lock(_mtx);
     std::vector<std::shared_ptr<UserInfo>> friend_list;
     int begin = _chat_loaded;
     int end = begin + CHAT_COUNT_PER_PAGE;
@@ -124,6 +137,7 @@ std::vector<std::shared_ptr<UserInfo>> UserMgr::GetChatListPerPage() {
 
 
 std::vector<std::shared_ptr<UserInfo>> UserMgr::GetConListPerPage() {
+    std::lock_guard<std::mutex> lock(_mtx);
     std::vector<std::shared_ptr<UserInfo>> friend_list;
     int begin = _contact_loaded;
     int end = begin + CHAT_COUNT_PER_PAGE;
@@ -159,6 +173,7 @@ void UserMgr::SlotAddFriendAuth(std::shared_ptr<AuthInfo> auth)
 }
 
 bool UserMgr::IsLoadChatFin() {
+    std::lock_guard<std::mutex> lock(_mtx);
     if (_chat_loaded >= _friend_list.size()) {
         return true;
     }
@@ -167,6 +182,7 @@ bool UserMgr::IsLoadChatFin() {
 }
 
 void UserMgr::UpdateChatLoadedCount() {
+    std::lock_guard<std::mutex> lock(_mtx);
     int begin = _chat_loaded;
     int end = begin + CHAT_COUNT_PER_PAGE;
 
@@ -183,6 +199,7 @@ void UserMgr::UpdateChatLoadedCount() {
 }
 
 void UserMgr::UpdateContactLoadedCount() {
+    std::lock_guard<std::mutex> lock(_mtx);
     int begin = _contact_loaded;
     int end = begin + CHAT_COUNT_PER_PAGE;
 
@@ -200,6 +217,7 @@ void UserMgr::UpdateContactLoadedCount() {
 
 bool UserMgr::IsLoadConFin()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     if (_contact_loaded >= _friend_list.size()) {
         return true;
     }
@@ -209,6 +227,7 @@ bool UserMgr::IsLoadConFin()
 
 bool UserMgr::CheckFriendById(int uid)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto iter = _friend_map.find(uid);
     if(iter == _friend_map.end()){
         return false;
@@ -219,18 +238,21 @@ bool UserMgr::CheckFriendById(int uid)
 
 void UserMgr::AddFriend(std::shared_ptr<AuthRsp> auth_rsp)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto friend_info = std::make_shared<UserInfo>(auth_rsp);
     _friend_map[friend_info->_uid] = friend_info;
 }
 
 void UserMgr::AddFriend(std::shared_ptr<AuthInfo> auth_info)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto friend_info = std::make_shared<UserInfo>(auth_info);
     _friend_map[friend_info->_uid] = friend_info;
 }
 
 std::shared_ptr<UserInfo> UserMgr::GetFriendById(int uid)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto find_it = _friend_map.find(uid);
     if(find_it == _friend_map.end()){
         return nullptr;
@@ -243,16 +265,19 @@ std::shared_ptr<UserInfo> UserMgr::GetFriendById(int uid)
 
 int UserMgr::GetLastChatThreadId()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     return _last_chat_thread_id;
 }
 
 void UserMgr::SetLastChatThreadId(int id)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     _last_chat_thread_id = id;
 }
 
 void UserMgr::AddChatThreadData(std::shared_ptr<ChatThreadData> chat_thread_data, int other_uid)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     //建立会话id到数据的映射关系
     _chat_map[chat_thread_data->GetThreadId()] = chat_thread_data; 
     //存储会话列表
@@ -265,6 +290,7 @@ void UserMgr::AddChatThreadData(std::shared_ptr<ChatThreadData> chat_thread_data
 
 int UserMgr::GetThreadIdByUid(int uid)
 {
+   std::lock_guard<std::mutex> lock(_mtx);
    auto iter = _uid_to_thread_id.find(uid);
    if (iter == _uid_to_thread_id.end()){
        return -1;
@@ -275,6 +301,7 @@ int UserMgr::GetThreadIdByUid(int uid)
 
 std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByThreadId(int thread_id)
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto find_iter = _chat_map.find(thread_id);
     if (find_iter != _chat_map.end()) {
         return find_iter.value();
@@ -283,6 +310,7 @@ std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByThreadId(int thread_id)
 }
 
 std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByUid(int uid) {
+    std::lock_guard<std::mutex> lock(_mtx);
     auto iter = _uid_to_thread_id.find(uid);
     if (iter == _uid_to_thread_id.end()) {
         return nullptr;
@@ -300,6 +328,7 @@ std::shared_ptr<ChatThreadData> UserMgr::GetChatThreadByUid(int uid) {
 
 std::shared_ptr<ChatThreadData> UserMgr::GetCurLoadData()
 {
+    std::lock_guard<std::mutex> lock(_mtx);
     if (_cur_load_chat_index >= _chat_thread_ids.size()) {
         return nullptr;
     }
@@ -313,6 +342,7 @@ std::shared_ptr<ChatThreadData> UserMgr::GetCurLoadData()
 }
 
 std::shared_ptr<ChatThreadData> UserMgr::GetNextLoadData() {
+    std::lock_guard<std::mutex> lock(_mtx);
     _cur_load_chat_index++;
     if (_cur_load_chat_index >= _chat_thread_ids.size()) {
         return nullptr;

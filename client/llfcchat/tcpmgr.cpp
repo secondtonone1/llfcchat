@@ -129,6 +129,10 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
                     qint64 w2 = _socket.write(_current_block);
                     qDebug() << "[TcpMgr] Dequeued and write() returned" << w2;
             });
+
+
+        //关闭socket
+        connect(this, &TcpMgr::sig_close, this, &TcpMgr::slot_tcp_close);
         //注册消息
         initHandlers();
 
@@ -161,7 +165,12 @@ void TcpMgr::registerMetaType() {
 }
 
 void TcpMgr::CloseConnection(){
-    _socket.close();
+    emit sig_close();
+}
+
+void TcpMgr::SendData(ReqId reqId, QByteArray data)
+{
+    emit sig_send_data(reqId, data);
 }
 
 TcpMgr::~TcpMgr(){
@@ -746,14 +755,18 @@ void TcpMgr::handleMsg(ReqId id, int len, QByteArray data)
    find_iter.value()(id,len,data);
 }
 
-void TcpMgr::slot_tcp_connect(ServerInfo si)
+void TcpMgr::slot_tcp_close() {
+    _socket.close();
+}
+
+void TcpMgr::slot_tcp_connect(std::shared_ptr<ServerInfo> si)
 {
     qDebug()<< "receive tcp connect signal";
     // 尝试连接到服务器
-    qDebug() << "Connecting to server...";
-    _host = si.Host;
-    _port = static_cast<uint16_t>(si.Port.toUInt());
-    _socket.connectToHost(si.Host, _port);
+    qDebug() << "Connecting to chat server...";
+    _host = si->_chat_host;
+    _port = static_cast<uint16_t>(si->_chat_port.toUInt());
+    _socket.connectToHost(_host, _port);
 }
 
 void TcpMgr::slot_send_data(ReqId reqId, QByteArray dataBytes)

@@ -6,6 +6,7 @@
 #include <QRegExp>
 #include <QRegularExpression>
 #include <QPainter>
+#include "filetcpmgr.h"
 
 LoginDialog::LoginDialog(QWidget *parent) :
     QDialog(parent),
@@ -27,10 +28,12 @@ LoginDialog::LoginDialog(QWidget *parent) :
     //连接tcp管理者发出的登陆失败信号
     connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_login_failed, this, &LoginDialog::slot_login_failed);
 
+    //连接tcp连接资源服务器请求的信号和槽函数
+    connect(this, &LoginDialog::sig_connect_res_server,
+            FileTcpMgr::GetInstance().get(), &FileTcpMgr::slot_tcp_connect);
 
-   // connect(this, &LoginDialog::sig_test, TcpMgr::GetInstance().get(), &TcpMgr::slot_test);
-
-
+    //连接资源管理tcp发出的连接成功信号
+    connect(FileTcpMgr::GetInstance().get(), &FileTcpMgr::sig_con_success, this, &LoginDialog::slot_res_con_finish);
     initHead();
 }
 
@@ -83,17 +86,23 @@ void LoginDialog::initHttpHandlers()
         auto email = jsonObj["email"].toString();
 
         //发送信号通知tcpMgr发送长链接
-        ServerInfo si;
-        si.Uid = jsonObj["uid"].toInt();
-        si.Host = jsonObj["host"].toString();
-        si.Port = jsonObj["port"].toString();
-        si.Token = jsonObj["token"].toString();
+        _si = std::make_shared<ServerInfo>();
 
-        _uid = si.Uid;
-        _token = si.Token;
-        qDebug()<< "email is " << email << " uid is " << si.Uid <<" host is "
-                << si.Host << " Port is " << si.Port << " Token is " << si.Token;
-        emit sig_connect_tcp(si);
+        _si->_uid = jsonObj["uid"].toInt();
+        _si->_chat_host = jsonObj["chathost"].toString();
+        _si->_chat_port = jsonObj["chatport"].toString();
+        _si->_token = jsonObj["token"].toString();
+
+        _si->_res_host = jsonObj["reshost"].toString();
+        _si->_res_port = jsonObj["resport"].toString();
+
+
+        qDebug()<< "email is " << email << " uid is " << _si->_uid <<" chat host is "
+                << _si->_chat_host << " chat port is "
+                << _si->_chat_port << " token is " << _si->_token
+                << " res host is " << _si->_res_host
+                << " res port is " << _si->_res_port;
+        emit sig_connect_tcp(_si);
        // qDebug() << "send thread is " << QThread::currentThread();
        // emit sig_test();
     });
@@ -214,24 +223,12 @@ void LoginDialog::slot_login_mod_finish(ReqId id, QString res, ErrorCodes err)
 
 void LoginDialog::slot_tcp_con_finish(bool bsuccess)
 {
-
-   if(bsuccess){
-      showTip(tr("聊天服务连接成功，正在登录..."),true);
-      QJsonObject jsonObj;
-      jsonObj["uid"] = _uid;
-      jsonObj["token"] = _token;
-
-      QJsonDocument doc(jsonObj);
-      QByteArray jsonData = doc.toJson(QJsonDocument::Indented);
-
-      //发送tcp请求给chat server
-     emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_CHAT_LOGIN, jsonData);
-
-   }else{
-      showTip(tr("网络异常"),false);
-      enableBtn(true);
-   }
-
+    if(bsuccess){
+        showTip(tr("聊天服务连接成功，正在连接资源服务器..."),true);
+        emit sig_connect_res_server(_si);
+    }else{
+        showTip(tr("网络异常"), false);
+    }
 }
 
 void LoginDialog::slot_login_failed(int err)
@@ -240,6 +237,27 @@ void LoginDialog::slot_login_failed(int err)
                              .arg(err);
     showTip(result,false);
     enableBtn(true);
+}
+
+void LoginDialog::slot_res_con_finish(bool bsuccess)
+{
+       if(bsuccess){
+          showTip(tr("聊天服务连接成功，正在登录..."),true);
+          QJsonObject jsonObj;
+          jsonObj["uid"] = _si->_uid;
+          jsonObj["token"] = _si->_token;
+
+          QJsonDocument doc(jsonObj);
+          QByteArray jsonData = doc.toJson(QJsonDocument::Indented);
+
+          //发送tcp请求给chat server
+         emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_CHAT_LOGIN, jsonData);
+
+       }else{
+          showTip(tr("网络异常"),false);
+          enableBtn(true);
+       }
+
 }
 
 void LoginDialog::AddTipErr(TipErr te,QString tips){

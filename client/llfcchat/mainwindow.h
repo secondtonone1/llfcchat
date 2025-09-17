@@ -41,6 +41,7 @@ public slots:
     void SlotSwitchChat();
     void SlotOffline();
     void SlotExcepConOffline();
+    void SlotResServerConOffline();
 
 private:
     void offlineLogin();

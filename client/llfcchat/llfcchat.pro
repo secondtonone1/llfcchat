@@ -49,6 +49,7 @@ SOURCES += \
         conuseritem.cpp \
         customizeedit.cpp \
         customizetextedit.cpp \
+        filetcpmgr.cpp \
         findfaildlg.cpp \
         findsuccessdlg.cpp \
         friendinfopage.cpp \
@@ -99,6 +100,7 @@ HEADERS += \
         conuseritem.h \
         customizeedit.h \
         customizetextedit.h \
+        filetcpmgr.h \
         findfaildlg.h \
         findsuccessdlg.h \
         friendinfopage.h \

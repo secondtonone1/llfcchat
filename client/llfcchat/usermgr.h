@@ -6,6 +6,7 @@
 #include "userdata.h"
 #include <vector>
 #include <mutex>
+
 class UserMgr:public QObject,public Singleton<UserMgr>,
         public std::enable_shared_from_this<UserMgr>
 {
@@ -15,6 +16,7 @@ public:
     ~ UserMgr();
     void SetUserInfo(std::shared_ptr<UserInfo> user_info);
     void SetToken(QString token);
+    QString GetToken();
     int GetUid();
     QString GetName();
     QString GetNick();
@@ -46,6 +48,11 @@ public:
     //获取当前正在加载的聊天数据。
     std::shared_ptr<ChatThreadData> GetCurLoadData();
     std::shared_ptr<ChatThreadData> GetNextLoadData();
+
+    //将md5和文件信息关联起来
+    void AddNameFile(QString name, std::shared_ptr<QFileInfo> file_info);
+
+    std::shared_ptr<QFileInfo> GetFileInfoByName(QString name);
 private:
     UserMgr();
     std::shared_ptr<UserInfo> _user_info;
@@ -67,6 +74,9 @@ private:
     QMap<int, int> _uid_to_thread_id;
 
     std::mutex _mtx;
+
+    //上传文件md5和文件信息关联 映射
+    QMap<QString, std::shared_ptr<QFileInfo> > _name_to_fileinfo;
 
 public slots:
     void SlotAddFriendRsp(std::shared_ptr<AuthRsp> rsp);

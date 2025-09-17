@@ -18,6 +18,11 @@ void UserMgr::SetToken(QString token)
     _token = token;
 }
 
+QString UserMgr::GetToken(){
+     std::lock_guard<std::mutex> lock(_mtx);
+     return _token;
+}
+
 int UserMgr::GetUid()
 {
     std::lock_guard<std::mutex> lock(_mtx);
@@ -355,6 +360,25 @@ std::shared_ptr<ChatThreadData> UserMgr::GetNextLoadData() {
 
     return iter.value();
 }
+
+void UserMgr::AddNameFile(QString name, std::shared_ptr<QFileInfo> file_info)
+{
+    std::lock_guard<std::mutex> lock(_mtx);
+    _name_to_fileinfo.insert(name, file_info);
+}
+
+std::shared_ptr<QFileInfo> UserMgr::GetFileInfoByName(QString name)
+{
+    std::lock_guard<std::mutex> lock(_mtx);
+    auto iter = _name_to_fileinfo.find(name);
+    if(iter == _name_to_fileinfo.end()){
+        return nullptr;
+    }
+
+    return iter.value();
+}
+
+
 
 
 

@@ -52,6 +52,8 @@ enum ReqId{
     ID_CREATE_PRIVATE_CHAT_RSP = 1028, //创建私聊回复
     ID_LOAD_CHAT_MSG_REQ = 1029,      //加载聊天消息
     ID_LOAD_CHAT_MSG_RSP = 1030,      //加载聊天消息
+    ID_UPLOAD_HEAD_ICON_REQ  = 1031,      //上传头像请求
+    ID_UPLOAD_HEAD_ICON_RSP  = 1032,      //上传头像回复
 };
 Q_DECLARE_METATYPE(ReqId)
 
@@ -89,14 +91,18 @@ extern QString gate_url_prefix;
 struct ServerInfo{
 public:
     ServerInfo() = default;
-    ServerInfo(const ServerInfo& other):Host(other.Host),Port(other.Port),Token(other.Token),Uid(other.Uid){}
-    QString Host;
-    QString Port;
-    QString Token;
-    int Uid;
+    ServerInfo(const ServerInfo& other):_chat_host(other._chat_host),_chat_port(other._chat_port),
+        _token(other._token),_uid(other._uid){}
+    QString _chat_host;
+    QString _chat_port;
+    QString _res_host;
+    QString _res_port;
+    QString _token;
+    int _uid;
 };
 
 Q_DECLARE_METATYPE(ServerInfo)
+Q_DECLARE_METATYPE(std::shared_ptr<ServerInfo>)
 
 enum class ChatRole
 {
@@ -184,5 +190,18 @@ enum class ChatMsgType {
     PIC = 1,
     FILE = 2
 };
+
+
+extern QString generateUniqueFileName(const QString& originalName);
+
+extern QString generateUniqueIconName();
+//TCP文件上传包头长度
+#define FILE_UPLOAD_HEAD_LEN 6
+//TCP ID长度
+#define FILE_UPLOAD_ID_LEN 2
+//TCP 长度字段的长度
+#define FILE_UPLOAD_LEN_LEN 4
+//最大文件长度
+#define MAX_FILE_LEN 2048
 
 #endif // GLOBAL_H

@@ -8,6 +8,10 @@
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QDir>
+#include "usermgr.h"
+#include "tcpmgr.h"
+#include "filetcpmgr.h"
+#include "global.h"
 
 UserInfoPage::UserInfoPage(QWidget *parent) :
     QWidget(parent),
@@ -29,6 +33,8 @@ UserInfoPage::UserInfoPage(QWidget *parent) :
     ui->nick_ed->setText(nick);
     ui->name_ed->setText(name);
     ui->desc_ed->setText(desc);
+    //连接上
+    connect(ui->up_btn, &QPushButton::clicked, this, &UserInfoPage::slot_up_load);
 }
 
 UserInfoPage::~UserInfoPage()
@@ -37,7 +43,7 @@ UserInfoPage::~UserInfoPage()
 }
 
 //上传头像
-void UserInfoPage::on_up_btn_clicked()
+void UserInfoPage::slot_up_load()
 {
     // 1. 让对话框也能选 *.webp
     QString filename = QFileDialog::getOpenFileName(
@@ -85,7 +91,9 @@ void UserInfoPage::on_up_btn_clicked()
         }
     }
     // 3. 拼接最终的文件名 head.png
-    QString filePath = dir.filePath("avatars/head.png");
+    QString file_name = generateUniqueIconName();
+    QString filePath = dir.filePath("avatars" +
+                          QString(QDir::separator()) + file_name);
 
     // 4. 保存 scaledPixmap 为 PNG（无损、最高质量）
     if (!scaledPixmap.save(filePath, "PNG")) {
@@ -98,4 +106,104 @@ void UserInfoPage::on_up_btn_clicked()
         qDebug() << "头像已保存到：" << filePath;
         // 以后读取直接用同一路径：storageDir/avatars/head.png
     }
+
+    //实现头像上传
+    QFile file(filePath);
+    if(!file.open(QIODevice::ReadOnly)){
+        qWarning() << "Could not open file:" << file.errorString();
+        return;
+    }
+
+    //保存当前文件位置指针
+    qint64 originalPos = file.pos();
+
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    if (!hash.addData(&file)) {
+            qWarning() << "Failed to read data from file:" << filePath;
+            return ;
+    }
+
+    // 5. 转化为16进制字符串
+    QString file_md5 = hash.result().toHex(); // 返回十六进制字符串
+
+    //读取文件内容并发送
+    QByteArray buffer;
+    int seq = 0;
+
+    //创建QFileInfo 对象
+    auto fileInfo = std::make_shared<QFileInfo>(filePath);
+    //获取文件名
+    QString fileName = fileInfo->fileName();
+    //文件名
+    qDebug() << "文件名是: " << fileName;
+
+    //获取文件大小
+    int total_size = fileInfo->size();
+    //最后一个发送序列
+    int last_seq = 0;
+    //获取最后一个发送序列
+    if(total_size % MAX_FILE_LEN){
+        last_seq = (total_size / MAX_FILE_LEN) +1;
+    }else{
+        last_seq = total_size / MAX_FILE_LEN;
+    }
+
+    // 恢复文件指针到原来的位置
+    file.seek(originalPos);
+
+    //每次读取MAX_FILE_LEN字节并发送
+    buffer = file.read(MAX_FILE_LEN);
+
+    QJsonObject jsonObj;
+    //将文件内容转化为Base64 编码(可选)
+    QString base64Data = buffer.toBase64();
+    ++seq;
+    jsonObj["md5"] = file_md5;
+    jsonObj["name"] = file_name;
+    jsonObj["seq"] = seq;
+    jsonObj["trans_size"] = buffer.size() + (seq - 1) * MAX_FILE_LEN;
+    jsonObj["total_size"] = total_size;
+    jsonObj["token"] = UserMgr::GetInstance()->GetToken();
+    jsonObj["uid"] = UserMgr::GetInstance()->GetUid();
+
+    if (buffer.size() + (seq - 1) * MAX_FILE_LEN == total_size) {
+        jsonObj["last"] = 1;
+    } else {
+        jsonObj["last"] = 0;
+    }
+
+    jsonObj["data"] = base64Data;
+    jsonObj["last_seq"] = last_seq;
+    QJsonDocument doc(jsonObj);
+    auto send_data = doc.toJson();
+    //将md5信息和文件信息关联存储
+    UserMgr::GetInstance()->AddNameFile(file_name, fileInfo);
+    //发送消息
+    FileTcpMgr::GetInstance()->SendData(ID_UPLOAD_HEAD_ICON_REQ, send_data);
+    file.close();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

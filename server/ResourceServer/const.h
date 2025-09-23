@@ -16,7 +16,9 @@ enum ErrorCodes {
 	TokenInvalid = 1010,   //Token失效
 	UidInvalid = 1011,  //uid无效
 	FileNotExists = 1012, //文件不存在
-	FileSaveRedisFailed = 1013 //文件存储redis失败
+	FileSaveRedisFailed = 1013, //文件存储redis失败
+	CreateFilePathFailed = 1014, //文件路径创建失败
+	FileWritePermissionFailed = 1015,  //文件写权限不足
 };
 
 

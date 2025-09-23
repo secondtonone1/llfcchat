@@ -67,11 +67,15 @@ void FileWorker::task_callback(std::shared_ptr<FileTask> task)
 	boost::filesystem::path dir_path = file_path.parent_path();
 	// 获取完整文件名（包含扩展名）
 	std::string filename = file_path.filename().string();
+	Json::Value result;
+	result["error"] = ErrorCodes::Success;
 
 	// Check if directory exists, if not, create it
 	if (!boost::filesystem::exists(dir_path)) {
 		if (!boost::filesystem::create_directories(dir_path)) {
 			std::cerr << "Failed to create directory: " << dir_path.string() << std::endl;
+			result["error"] = ErrorCodes::FileNotExists;
+			task->_callback(result);
 			return;
 		}
 	}
@@ -91,12 +95,16 @@ void FileWorker::task_callback(std::shared_ptr<FileTask> task)
 
 	if (!outfile) {
 		std::cerr << "无法打开文件进行写入。" << std::endl;
+		result["error"] = ErrorCodes::FileWritePermissionFailed;
+		task->_callback(result);
 		return ;
 	}
 
 	outfile.write(decoded.data(), decoded.size());
 	if (!outfile) {
 		std::cerr << "写入文件失败。" << std::endl;
+		result["error"] = ErrorCodes::FileWritePermissionFailed;
+		task->_callback(result);
 		return ;
 	}
 
@@ -123,6 +131,10 @@ void FileWorker::task_callback(std::shared_ptr<FileTask> task)
 		redis_root["icon"] = user_info->icon;
 		std::string base_key = USER_BASE_INFO + std::to_string(task->_uid);
 		RedisMgr::GetInstance()->Set(base_key, redis_root.toStyledString());
+	}
+
+	if (task->_callback) {
+		task->_callback(result);
 	}
 
 }

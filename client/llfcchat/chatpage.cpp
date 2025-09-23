@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include "tcpmgr.h"
 #include <QUuid>
+#include <QStandardPaths>
 
 ChatPage::ChatPage(QWidget *parent) :
     QWidget(parent),
@@ -68,7 +69,34 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
         ChatItemBase* pChatItem = new ChatItemBase(role);
         
         pChatItem->setUserName(self_info->_name);
-        pChatItem->setUserIcon(QPixmap(self_info->_icon));
+
+        // 使用正则表达式检查是否是默认头像
+        QRegularExpression regex("^:/res/head_(\\d+)\\.jpg$");
+        QRegularExpressionMatch match = regex.match(self_info->_icon);
+        if (match.hasMatch()) {
+            pChatItem->setUserIcon(QPixmap(self_info->_icon));
+        }
+        else {
+            // 如果是用户上传的头像，获取存储目录
+            QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+            QDir avatarsDir(storageDir + "/avatars");
+
+            // 确保目录存在
+            if (avatarsDir.exists()) {
+                QString avatarPath = avatarsDir.filePath(QFileInfo(self_info->_icon).fileName()); // 获取上传头像的完整路径
+                QPixmap pixmap(avatarPath); // 加载上传的头像图片
+                if (!pixmap.isNull()) {
+                    pChatItem->setUserIcon(pixmap);
+                }
+                else {
+                    qWarning() << "无法加载上传的头像：" << avatarPath;
+                }
+            }
+            else {
+                qWarning() << "头像存储目录不存在：" << avatarsDir.path();
+            }
+        }
+   
         QWidget* pBubble = nullptr;
         if (msg->GetMsgType() == ChatMsgType::TEXT) {
             pBubble = new TextBubble(role, msg->GetMsgContent());
@@ -90,7 +118,34 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
             return;
         }
         pChatItem->setUserName(friend_info->_name);
-        pChatItem->setUserIcon(QPixmap(friend_info->_icon));
+        
+        // 使用正则表达式检查是否是默认头像
+        QRegularExpression regex("^:/res/head_(\\d+)\\.jpg$");
+        QRegularExpressionMatch match = regex.match(friend_info->_icon);
+        if (match.hasMatch()) {
+            pChatItem->setUserIcon(QPixmap(friend_info->_icon));
+        }
+        else {
+            // 如果是用户上传的头像，获取存储目录
+            QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+            QDir avatarsDir(storageDir + "/avatars");
+
+            // 确保目录存在
+            if (avatarsDir.exists()) {
+                QString avatarPath = avatarsDir.filePath(QFileInfo(friend_info->_icon).fileName()); // 获取上传头像的完整路径
+                QPixmap pixmap(avatarPath); // 加载上传的头像图片
+                if (!pixmap.isNull()) {
+                    pChatItem->setUserIcon(pixmap);
+                }
+                else {
+                    qWarning() << "无法加载上传的头像：" << avatarPath;
+                }
+            }
+            else {
+                qWarning() << "头像存储目录不存在：" << avatarsDir.path();
+            }
+        }
+
         QWidget* pBubble = nullptr;
         if (msg->GetMsgType() == ChatMsgType::TEXT) {
             pBubble = new TextBubble(role, msg->GetMsgContent());

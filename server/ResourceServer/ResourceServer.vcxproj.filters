@@ -51,9 +51,6 @@
     <ClCompile Include="UserMgr.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="RedisMgr.cpp">
-      <Filter>头文件</Filter>
-    </ClCompile>
     <ClCompile Include="DistLock.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -70,6 +67,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="message.pb.cc">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RedisMgr.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

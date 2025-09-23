@@ -3,14 +3,17 @@
 #include <mutex>
 #include <queue>
 #include <condition_variable>
+#include <json/value.h>
+#include <functional>
 
 class CSession;
 struct FileTask {
 	FileTask(std::shared_ptr<CSession> session, int uid, std::string path, std::string name,
 		int seq, int total_size, int trans_size, int last, 
-		std::string file_data) :_session(session), _uid(uid),
+		std::string file_data,
+		std::function<void(const Json::Value&)> callback) :_session(session), _uid(uid),
 		_seq(seq), _path(path), _name(name), _total_size(total_size),
-		_trans_size(trans_size), _last(last), _file_data(file_data)
+		_trans_size(trans_size), _last(last), _file_data(file_data), _callback(callback)
 	{}
 	~FileTask(){}
 	std::shared_ptr<CSession> _session;
@@ -22,6 +25,7 @@ struct FileTask {
 	int _trans_size ;
 	int _last ;
 	std::string _file_data;
+	std::function<void(const Json::Value&)>  _callback;  //添加回调函数
 };
 
 class FileWorker

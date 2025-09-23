@@ -12,6 +12,7 @@
 #include "tcpmgr.h"
 #include "filetcpmgr.h"
 #include "global.h"
+#include <QRegularExpression>
 
 UserInfoPage::UserInfoPage(QWidget *parent) :
     QWidget(parent),
@@ -20,10 +21,43 @@ UserInfoPage::UserInfoPage(QWidget *parent) :
     ui->setupUi(this);
     auto icon = UserMgr::GetInstance()->GetIcon();
     qDebug() << "icon is " << icon ;
-    QPixmap pixmap(icon);
-    QPixmap scaledPixmap = pixmap.scaled( ui->head_lb->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
-    ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
-    ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+
+    //使用正则表达式检查是否使用默认头像
+    QRegularExpression regex("^:/res/head_(\\d+)\\.jpg$");
+    QRegularExpressionMatch match = regex.match(icon);
+    if (match.hasMatch()) {
+        QPixmap pixmap(icon);
+        QPixmap scaledPixmap = pixmap.scaled(ui->head_lb->size(), 
+            Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+        ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+        ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+    }
+    else {
+        // 如果是用户上传的头像，获取存储目录
+        QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir avatarsDir(storageDir + "/avatars");
+
+        // 确保目录存在
+        if (avatarsDir.exists()) {
+            QString avatarPath = avatarsDir.filePath(QFileInfo(icon).fileName()); // 获取上传头像的完整路径
+            QPixmap pixmap(avatarPath); // 加载上传的头像图片
+            if (!pixmap.isNull()) {
+                QPixmap scaledPixmap = pixmap.scaled(ui->head_lb->size(),
+                    Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+                ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+                ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+            }
+            else {
+                qWarning() << "无法加载上传的头像：" << avatarPath;
+            }
+        }
+        else {
+            qWarning() << "头像存储目录不存在：" << avatarsDir.path();
+        }
+    }
+
+
+  
     //获取nick
     auto nick = UserMgr::GetInstance()->GetNick();
     //获取name

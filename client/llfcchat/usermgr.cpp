@@ -361,17 +361,23 @@ std::shared_ptr<ChatThreadData> UserMgr::GetNextLoadData() {
     return iter.value();
 }
 
-void UserMgr::AddNameFile(QString name, std::shared_ptr<QFileInfo> file_info)
+void UserMgr::AddUploadFile(QString name, std::shared_ptr<QFileInfo> file_info)
 {
     std::lock_guard<std::mutex> lock(_mtx);
-    _name_to_fileinfo.insert(name, file_info);
+    _name_to_upload_info.insert(name, file_info);
 }
 
-std::shared_ptr<QFileInfo> UserMgr::GetFileInfoByName(QString name)
+void UserMgr::RmvUploadFile(QString name)
 {
     std::lock_guard<std::mutex> lock(_mtx);
-    auto iter = _name_to_fileinfo.find(name);
-    if(iter == _name_to_fileinfo.end()){
+    _name_to_upload_info.remove(name);
+}
+
+std::shared_ptr<QFileInfo> UserMgr::GetUploadInfoByName(QString name)
+{
+    std::lock_guard<std::mutex> lock(_mtx);
+    auto iter = _name_to_upload_info.find(name);
+    if(iter == _name_to_upload_info.end()){
         return nullptr;
     }
 
@@ -379,6 +385,72 @@ std::shared_ptr<QFileInfo> UserMgr::GetFileInfoByName(QString name)
 }
 
 
+bool UserMgr::IsDownLoading(QString name) {
+    std::lock_guard<std::mutex> lock(_down_load_mtx);
+    auto iter = _name_to_download_info.find(name);
+    if (iter == _name_to_download_info.end()) {
+        return false;
+    }
+
+    return true;
+}
+
+void UserMgr::AddDownloadFile(QString name, 
+    std::shared_ptr<DownloadInfo> file_info) {
+    std::lock_guard<std::mutex> lock(_down_load_mtx);
+    _name_to_download_info[name] = file_info;
+}
+
+void UserMgr::RmvDownloadFile(QString name) {
+    std::lock_guard<std::mutex> lock(_down_load_mtx);
+    _name_to_download_info.remove(name);
+}
+
+std::shared_ptr<DownloadInfo> UserMgr::GetDownloadInfo(QString name)
+{
+    std::lock_guard<std::mutex> lock(_down_load_mtx);
+    auto iter = _name_to_download_info.find(name);
+    if (iter == _name_to_download_info.end()) {
+        return nullptr;
+    }
+
+    return iter.value();
+}
+
+void UserMgr::AddLabelToReset(QString path, QLabel* label)
+{
+    auto iter = _path_to_reset_labels.find(path);
+    if (iter == _path_to_reset_labels.end()) {
+        QList<QLabel*> list;
+        list.append(label);
+        _path_to_reset_labels.insert(path, list);
+        return;
+    }
+
+    iter->append(label);
+}
+
+void UserMgr::ResetLabelIcon(QString path)
+{
+   auto iter = _path_to_reset_labels.find(path);
+   if (iter == _path_to_reset_labels.end()) {
+       return;
+   }
+
+   for (auto ele_iter = iter.value().begin(); ele_iter != iter.value().end(); ele_iter++) {
+       QPixmap pixmap(path); // 加载上传的头像图片
+       if (!pixmap.isNull()) {
+           QPixmap scaledPixmap = pixmap.scaled((*ele_iter)->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+           (*ele_iter)->setPixmap(scaledPixmap);
+           (*ele_iter)->setScaledContents(true);
+       }
+       else {
+           qWarning() << "无法加载上传的头像：" << path;
+       }
+   }
+
+   _path_to_reset_labels.erase(iter);
+}
 
 
 

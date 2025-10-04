@@ -10,9 +10,11 @@ class FileSystem :public Singleton<FileSystem>
 public:
 	~FileSystem();
 	void PostMsgToQue(shared_ptr <FileTask> msg, int index);
+	void PostDownloadTaskToQue(std::shared_ptr<DownloadTask> msg, int index);
 private:
 	FileSystem();
 	std::vector<std::shared_ptr<FileWorker>>  _file_workers;
+	std::vector<std::shared_ptr<DownloadWorker>> _down_load_worker;
 };
 
 

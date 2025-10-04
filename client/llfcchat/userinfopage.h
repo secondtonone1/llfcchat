@@ -14,7 +14,7 @@ class UserInfoPage : public QWidget
 public:
     explicit UserInfoPage(QWidget *parent = nullptr);
     ~UserInfoPage();
-
+protected:
 private slots:
     void slot_up_load();
 

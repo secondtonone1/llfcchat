@@ -82,6 +82,7 @@ public slots:
         std::vector<std::shared_ptr<TextChatData>> msglists);
 
     void slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<TextChatData>> msglists);
+    void slot_reset_icon(QString path);
 private slots:
 
 };

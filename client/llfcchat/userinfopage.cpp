@@ -36,19 +36,61 @@ UserInfoPage::UserInfoPage(QWidget *parent) :
         // 如果是用户上传的头像，获取存储目录
         QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
         QDir avatarsDir(storageDir + "/avatars");
-
         // 确保目录存在
         if (avatarsDir.exists()) {
+            auto file_name = QFileInfo(icon).fileName();
             QString avatarPath = avatarsDir.filePath(QFileInfo(icon).fileName()); // 获取上传头像的完整路径
             QPixmap pixmap(avatarPath); // 加载上传的头像图片
             if (!pixmap.isNull()) {
+
+                //判断是否正在下载
+                bool is_loading = UserMgr::GetInstance()->IsDownLoading(file_name);
+                if (is_loading) {
+                    qWarning() << "正在下载: " << file_name;
+                    //先加载默认的
+                    QPixmap pixmap(":/res/head_1.jpg");
+                    QPixmap scaledPixmap = pixmap.scaled(ui->head_lb->size(),
+                        Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+                    ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+                    ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+                    
+                }
+                else {
+                    QPixmap scaledPixmap = pixmap.scaled(ui->head_lb->size(),
+                        Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+                    ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+                    ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+                }
+            }
+            else {
+                qWarning() << "无法加载上传的头像：" << avatarPath;
+                UserMgr::GetInstance()->AddLabelToReset(avatarPath, ui->head_lb);
+                //先加载默认的
+                QPixmap pixmap(":/res/head_1.jpg");
                 QPixmap scaledPixmap = pixmap.scaled(ui->head_lb->size(),
                     Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
                 ui->head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
                 ui->head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
-            }
-            else {
-                qWarning() << "无法加载上传的头像：" << avatarPath;
+
+                //判断是否正在下载
+                bool is_loading = UserMgr::GetInstance()->IsDownLoading(file_name);
+                if (is_loading) {
+                    qWarning() << "正在下载: " << file_name;
+                }
+                else {
+                    //发送请求获取资源
+                    auto download_info = std::make_shared<DownloadInfo>();
+                    download_info->_name = file_name;
+                    download_info->_current_size = 0;
+                    download_info->_seq = 1;
+                    download_info->_total_size = 0;
+                    download_info->_client_path = avatarPath;
+                    //添加文件到管理者
+                    UserMgr::GetInstance()->AddDownloadFile(file_name, download_info);
+                    //发送消息
+                    FileTcpMgr::GetInstance()->SendDownloadInfo(download_info);
+                }
+
             }
         }
         else {
@@ -75,6 +117,7 @@ UserInfoPage::~UserInfoPage()
 {
     delete ui;
 }
+
 
 //上传头像
 void UserInfoPage::slot_up_load()
@@ -211,30 +254,11 @@ void UserInfoPage::slot_up_load()
     QJsonDocument doc(jsonObj);
     auto send_data = doc.toJson();
     //将md5信息和文件信息关联存储
-    UserMgr::GetInstance()->AddNameFile(file_name, fileInfo);
+    UserMgr::GetInstance()->AddUploadFile(file_name, fileInfo);
     //发送消息
     FileTcpMgr::GetInstance()->SendData(ID_UPLOAD_HEAD_ICON_REQ, send_data);
     file.close();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

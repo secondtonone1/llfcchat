@@ -20,6 +20,7 @@
 #include "usermgr.h"
 #include <QTimer>
 #include <QStandardPaths>
+#include "FileTcpMgr.h"
 
 ChatDialog::ChatDialog(QWidget* parent) :
 	QDialog(parent),
@@ -87,7 +88,8 @@ ChatDialog::ChatDialog(QWidget* parent) :
 
 		// 确保目录存在
 		if (avatarsDir.exists()) {
-			QString avatarPath = avatarsDir.filePath(QFileInfo(head_icon).fileName()); // 获取上传头像的完整路径
+			auto file_name = QFileInfo(head_icon).fileName();
+			QString avatarPath = avatarsDir.filePath(file_name); // 获取上传头像的完整路径
 			QPixmap pixmap(avatarPath); // 加载上传的头像图片
 			if (!pixmap.isNull()) {
 				QPixmap scaledPixmap = pixmap.scaled(ui->side_head_lb->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -96,6 +98,34 @@ ChatDialog::ChatDialog(QWidget* parent) :
 			}
 			else {
 				qWarning() << "无法加载上传的头像：" << avatarPath;
+				UserMgr::GetInstance()->AddLabelToReset(avatarPath, ui->side_head_lb);
+				//先加载默认的
+				QPixmap pixmap(":/res/head_1.jpg");
+				QPixmap scaledPixmap = pixmap.scaled(ui->side_head_lb->size(),
+					Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+				ui->side_head_lb->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+				ui->side_head_lb->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+
+				//判断是否正在下载
+				bool is_loading = UserMgr::GetInstance()->IsDownLoading(file_name);
+				if (is_loading) {
+					qWarning() << "正在下载: " << file_name;
+					
+				}
+				else {
+					//发送请求获取资源
+					auto download_info = std::make_shared<DownloadInfo>();
+					download_info->_name = file_name;
+					download_info->_current_size = 0;
+					download_info->_seq = 1;
+					download_info->_total_size = 0;
+					download_info->_client_path = avatarPath;
+					//添加文件到管理者
+					UserMgr::GetInstance()->AddDownloadFile(file_name, download_info);
+					//发送消息
+					FileTcpMgr::GetInstance()->SendDownloadInfo(download_info);
+				}
+
 			}
 		}
 		else {
@@ -204,6 +234,8 @@ ChatDialog::ChatDialog(QWidget* parent) :
 		this, &ChatDialog::slot_load_chat_msg);
 
 	connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_chat_msg_rsp, this, &ChatDialog::slot_add_chat_msg);
+	//重置label icon
+	connect(FileTcpMgr::GetInstance().get(), &FileTcpMgr::sig_reset_label_icon, this, &ChatDialog::slot_reset_icon);
 }
 
 ChatDialog::~ChatDialog()
@@ -499,8 +531,11 @@ void ChatDialog::slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<Te
 		}
 		//更新聊天界面信息
 		ui->chat_page->UpdateChatStatus(msg->GetUniqueId(),msg->GetStatus());
-	}
-		
+	}	
+}
+
+void ChatDialog::slot_reset_icon(QString path) {
+	UserMgr::GetInstance()->ResetLabelIcon(path);
 }
 
 void ChatDialog::showLoadingDlg(bool show)

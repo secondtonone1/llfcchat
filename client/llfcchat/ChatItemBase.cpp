@@ -88,3 +88,8 @@ void ChatItemBase::setStatus(int status)
         return ;
     }
 }
+
+
+QLabel* ChatItemBase::getIconLabel() {
+    return m_pIconLabel;
+}

@@ -277,10 +277,11 @@ void FileTcpMgr::initHandlers()
         qDebug() << "recv : " << name  << "file trans_size is " << trans_size;
         //判断trans_size和total_size相等
         if(total_size == trans_size){
+            UserMgr::GetInstance()->RmvUploadFile(name);
             return;
         }
 
-        auto file_info = UserMgr::GetInstance()->GetFileInfoByName(name);
+        auto file_info = UserMgr::GetInstance()->GetUploadInfoByName(name);
         if(!file_info){
             return;
         }
@@ -323,6 +324,99 @@ void FileTcpMgr::initHandlers()
         file.close();
     });
 
+    _handlers.insert(ID_DOWN_LOAD_FILE_RSP, [this](ReqId id, int len, QByteArray data) {
+        Q_UNUSED(len);
+        qDebug() << "handle id is " << id << " data is " << data;
+        // 将QByteArray转换为QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+        // 检查转换是否成功
+        if (jsonDoc.isNull()) {
+            qDebug() << "Failed to create QJsonDocument.";
+            return;
+        }
+
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (!jsonObj.contains("error")) {
+            int err = ErrorCodes::ERR_JSON;
+            qDebug() << "parse create private chat json parse failed " << err;
+            return;
+        }
+
+        int err = jsonObj["error"].toInt();
+        if (err != ErrorCodes::SUCCESS) {
+            qDebug() << "get create private chat failed, error is " << err;
+            return;
+        }
+
+        qDebug() << "Receive download file info rsp success";
+
+        QString base64Data = jsonObj["data"].toString();
+        QString clientPath = jsonObj["client_path"].toString();
+        int seq = jsonObj["seq"].toInt();
+        bool is_last = jsonObj["is_last"].toBool();
+        QString total_size_str = jsonObj["total_size"].toString();
+        qint64  total_size = total_size_str.toLongLong(nullptr);
+        QString current_size_str = jsonObj["current_size"].toString();
+        qint64  current_size = current_size_str.toLongLong(nullptr);
+        QString name = jsonObj["name"].toString();
+
+        auto file_info = UserMgr::GetInstance()->GetDownloadInfo(name);
+        if (file_info == nullptr) {
+            qDebug() << "file: " << name << " not found";
+            return;
+        }
+
+        file_info->_current_size = current_size;
+        file_info->_total_size = total_size;
+
+        //Base64解码
+        QByteArray decodedData = QByteArray::fromBase64(base64Data.toUtf8());
+        QFile file(clientPath);
+
+        // 根据 seq 决定打开模式
+        QIODevice::OpenMode mode;
+        if (seq == 1) {
+            // 第一个包，覆盖写入
+            mode = QIODevice::WriteOnly;
+        }
+        else {
+            // 后续包，追加写入
+            mode = QIODevice::WriteOnly | QIODevice::Append;
+        }
+
+        if (!file.open(mode)) {
+            qDebug() << "Failed to open file for writing:" << clientPath;
+            qDebug() << "Error:" << file.errorString();
+            return;
+        }
+
+
+        qint64 bytesWritten = file.write(decodedData);
+        if (bytesWritten != decodedData.size()) {
+            qDebug() << "Failed to write all data. Written:" << bytesWritten
+                << "Expected:" << decodedData.size();
+        }
+
+        file.close();
+
+        qDebug() << "Successfully wrote" << bytesWritten << "bytes to file";
+        qDebug() << "Progress:" << current_size << "/" << total_size
+            << "(" << (current_size * 100 / total_size) << "%)";
+
+        if (is_last) {
+            qDebug() << "File download completed:" << clientPath;
+            UserMgr::GetInstance()->RmvDownloadFile(name);
+            //发送信号通知主界面重新加载label
+            emit sig_reset_label_icon(clientPath);
+        }
+        else {
+            //继续请求
+            file_info->_seq = seq+1;
+            FileTcpMgr::GetInstance()->SendDownloadInfo(file_info);
+        }
+    });
 }
 
 
@@ -332,6 +426,22 @@ void FileTcpMgr::slot_tcp_close() {
 
 void FileTcpMgr::CloseConnection(){
     emit sig_close();
+}
+
+void FileTcpMgr::SendDownloadInfo(std::shared_ptr<DownloadInfo> download) {
+    QJsonObject jsonObj;
+    jsonObj["name"] = download->_name;
+    jsonObj["seq"] = download->_seq;
+    jsonObj["trans_size"] = 0;
+    jsonObj["total_size"] = 0;
+    jsonObj["token"] = UserMgr::GetInstance()->GetToken();
+    jsonObj["uid"] = UserMgr::GetInstance()->GetUid();
+    jsonObj["client_path"] = download->_client_path;
+
+    QJsonDocument doc(jsonObj);
+    auto send_data = doc.toJson();
+
+    SendData(ID_DOWN_LOAD_FILE_REQ, send_data);
 }
 
 

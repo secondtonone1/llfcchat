@@ -173,6 +173,8 @@ void TcpMgr::SendData(ReqId reqId, QByteArray data)
     emit sig_send_data(reqId, data);
 }
 
+
+
 TcpMgr::~TcpMgr(){
 
 }

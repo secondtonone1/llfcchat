@@ -54,6 +54,8 @@ enum ReqId{
     ID_LOAD_CHAT_MSG_RSP = 1030,      //加载聊天消息
     ID_UPLOAD_HEAD_ICON_REQ  = 1031,      //上传头像请求
     ID_UPLOAD_HEAD_ICON_RSP  = 1032,      //上传头像回复
+    ID_DOWN_LOAD_FILE_REQ = 1033,             //下载文件请求
+    ID_DOWN_LOAD_FILE_RSP = 1034,           //下载文件回复
 };
 Q_DECLARE_METATYPE(ReqId)
 
@@ -191,7 +193,6 @@ enum class ChatMsgType {
     FILE = 2
 };
 
-
 extern QString generateUniqueFileName(const QString& originalName);
 
 extern QString generateUniqueIconName();
@@ -203,5 +204,13 @@ extern QString generateUniqueIconName();
 #define FILE_UPLOAD_LEN_LEN 4
 //最大文件长度
 #define MAX_FILE_LEN 2048
+
+struct DownloadInfo {
+    QString _name;
+    int _total_size;
+    int _current_size;
+    int _seq;
+    QString _client_path;
+};
 
 #endif // GLOBAL_H

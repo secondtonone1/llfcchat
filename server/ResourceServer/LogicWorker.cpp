@@ -294,6 +294,68 @@ void LogicWorker::RegisterCallBacks()
 
 	};
 
+	_fun_callbacks[ID_DOWN_LOAD_FILE_REQ] = [this](shared_ptr<CSession> session, const short& msg_id,
+		const string& msg_data) {
+			Json::Reader reader;
+			Json::Value root;
+			reader.parse(msg_data, root);
+			auto seq = root["seq"].asInt();
+			auto name = root["name"].asString();
+			auto uid = root["uid"].asInt();
+			auto token = root["token"].asString();
+			auto client_path = root["client_path"].asString();
+
+			//转化为字符串
+			auto uid_str = std::to_string(uid);
+
+			auto file_path = ConfigMgr::Inst().GetFileOutPath();
+			auto file_path_str = (file_path / uid_str / name).string();
+			Json::Value  rtvalue;
+			auto callback = [=](const Json::Value& result) {
+
+				// 在异步任务完成后调用
+				Json::Value rtvalue = result;
+				rtvalue["client_path"] = client_path;
+				rtvalue["name"] = name;
+				std::string return_str = rtvalue.toStyledString();
+				session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+			};
+
+			//第一个包校验一下token是否合理
+			if (seq == 1) {
+				//从redis获取用户token是否正确
+				std::string uid_str = std::to_string(uid);
+				std::string token_key = USERTOKENPREFIX + uid_str;
+				std::string token_value = "";
+				bool success = RedisMgr::GetInstance()->Get(token_key, token_value);
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::UidInvalid;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					return;
+				}
+
+				if (token_value != token) {
+					rtvalue["error"] = ErrorCodes::TokenInvalid;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					return;
+				}
+			}
+
+			// 使用 std::hash 对字符串进行哈希
+			std::hash<std::string> hash_fn;
+			size_t hash_value = hash_fn(name); // 生成哈希值
+			int index = hash_value % FILE_WORKER_COUNT;
+			std::cout << "Hash value: " << hash_value << std::endl;
+
+			FileSystem::GetInstance()->PostDownloadTaskToQue(
+				std::make_shared<DownloadTask>(session, uid, name, seq, file_path_str, callback),
+				index
+			);
+
+	};
+
 
 }
 

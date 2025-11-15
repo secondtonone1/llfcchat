@@ -162,6 +162,7 @@ void TcpMgr::registerMetaType() {
 
     qRegisterMetaType<std::shared_ptr<ChatThreadData>>("std::shared_ptr<ChatThreadData>");
     qRegisterMetaType<ReqId>("ReqId");
+    qRegisterMetaType<std::shared_ptr<ImgChatData>>("std::shared_ptr<ImgChatData>");
 }
 
 void TcpMgr::CloseConnection(){
@@ -178,6 +179,7 @@ void TcpMgr::SendData(ReqId reqId, QByteArray data)
 TcpMgr::~TcpMgr(){
 
 }
+
 void TcpMgr::initHandlers()
 {
     //auto self = shared_from_this();
@@ -744,6 +746,54 @@ void TcpMgr::initHandlers()
         //发送信号通知界面
         emit sig_load_chat_msg(thread_id, last_msg_id, load_more, chat_datas);
         });
+
+    _handlers.insert(ID_IMG_CHAT_MSG_RSP, [this](ReqId id, int len, QByteArray data) {
+        Q_UNUSED(len);
+        qDebug() << "handle id is " << id << " data is " << data;
+        // 将QByteArray转换为QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+        // 检查转换是否成功
+        if (jsonDoc.isNull()) {
+            qDebug() << "Failed to create QJsonDocument.";
+            return;
+        }
+
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (!jsonObj.contains("error")) {
+            int err = ErrorCodes::ERR_JSON;
+            qDebug() << "parse create private chat json parse failed " << err;
+            return;
+        }
+
+        int err = jsonObj["error"].toInt();
+        if (err != ErrorCodes::SUCCESS) {
+            qDebug() << "get create private chat failed, error is " << err;
+            return;
+        }
+
+        qDebug() << "Receive create private chat rsp Success";
+
+        //收到消息后转发给页面
+        auto thread_id = jsonObj["thread_id"].toInt();
+        auto unique_id = jsonObj["unique_id"].toString();
+        auto unique_name = jsonObj["unique_name"].toString();
+        
+        auto sender = jsonObj["fromuid"].toInt();
+        auto msg_id = jsonObj["message_id"].toInt();
+        QString chat_time = jsonObj["chat_time"].toString();
+        int status = jsonObj["status"].toInt();
+
+        auto file_info = UserMgr::GetInstance()->GetTransFileByName(unique_name);
+ 
+        auto chat_data = std::make_shared<ImgChatData>(file_info, unique_id, thread_id, ChatFormType::PRIVATE,
+            ChatMsgType::TEXT, sender, status, chat_time);
+
+        //发送信号通知界面
+        emit sig_chat_img_rsp(thread_id, chat_data);
+        });
+    
 }
 
 void TcpMgr::handleMsg(ReqId id, int len, QByteArray data)

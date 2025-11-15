@@ -107,6 +107,9 @@ void LogicSystem::RegisterCallBacks() {
 
 	_fun_callbacks[ID_LOAD_CHAT_MSG_REQ] = std::bind(&LogicSystem::LoadChatMsg, this,
 		placeholders::_1, placeholders::_2, placeholders::_3);
+
+	_fun_callbacks[ID_IMG_CHAT_MSG_REQ] = std::bind(&LogicSystem::DealChatImgMsg, this,
+		placeholders::_1, placeholders::_2, placeholders::_3);
 }
 
 void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id, const string &msg_data) {
@@ -908,4 +911,57 @@ void LogicSystem::LoadChatMsg(std::shared_ptr<CSession> session,
 		rtvalue["chat_datas"].append(chat_data);
 	}
 
+}
+
+
+void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session, 
+	const short& msg_id, const string& msg_data) {
+	Json::Reader reader;
+	Json::Value root;
+	reader.parse(msg_data, root);
+
+	auto uid = root["fromuid"].asInt();
+	auto touid = root["touid"].asInt();
+
+	auto md5 = root["md5"].asString();
+	auto unique_name = root["name"].asString();
+	auto token = root["token"].asString();
+	auto unique_id = root["unique_id"].asString();
+	auto chat_time = root["chat_time"].asString();
+	auto status = root["status"].asInt();
+
+	Json::Value  rtvalue;
+	rtvalue["error"] = ErrorCodes::Success;
+
+	rtvalue["fromuid"] = uid;
+	rtvalue["touid"] = touid;
+	auto thread_id = root["thread_id"].asInt();
+	rtvalue["thread_id"] = thread_id;
+	rtvalue["md5"] = md5;
+	rtvalue["unique_name"] = unique_name;
+	rtvalue["unique_id"] = unique_id;
+	rtvalue["chat_time"] = chat_time;
+	rtvalue["status"] = status;
+
+	auto timestamp = getCurrentTimestamp();
+	auto chat_msg = std::make_shared<ChatMessage>();
+	chat_msg->chat_time = timestamp;
+	chat_msg->sender_id = uid;
+	chat_msg->recv_id = touid;
+	chat_msg->unique_id = unique_id;
+	chat_msg->thread_id = thread_id;
+	chat_msg->content = unique_name;
+	chat_msg->status = MsgStatus::UN_UPLOAD;
+
+
+	//插入数据库
+	MysqlMgr::GetInstance()->AddChatMsg(chat_msg);
+
+	Defer defer([this, &rtvalue, session]() {
+		std::string return_str = rtvalue.toStyledString();
+		session->Send(return_str, ID_IMG_CHAT_MSG_RSP);
+		});
+
+
+	//发送通知 todo... 以后等文件上传完成再通知
 }

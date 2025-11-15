@@ -1,4 +1,4 @@
-#ifndef CHATDIALOG_H
+ï»¿#ifndef CHATDIALOG_H
 #define CHATDIALOG_H
 
 #include <QDialog>
@@ -48,7 +48,7 @@ private:
     QWidget* _last_widget;
     //todo...
     //QMap<int, QListWidgetItem*> _chat_items_added;
-    //chat_thred_idºÍ¶ÔÓ¦µÄitemµÄÓ³Éä¹ØÏµ¡£
+    //chat_thred_idå’Œå¯¹åº”çš„itemçš„æ˜ å°„å…³ç³»ã€‚
     QMap<int, QListWidgetItem*>  _chat_thread_items;
     int _cur_chat_thread_id;
     QTimer * _timer;
@@ -82,6 +82,7 @@ public slots:
         std::vector<std::shared_ptr<TextChatData>> msglists);
 
     void slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<TextChatData>> msglists);
+    void slot_add_img_msg(int thread_id, std::shared_ptr<ImgChatData> img_msg);
     void slot_reset_icon(QString path);
 private slots:
 

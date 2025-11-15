@@ -70,61 +70,7 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
         ChatItemBase* pChatItem = new ChatItemBase(role);
         
         pChatItem->setUserName(self_info->_name);
-
-        // 使用正则表达式检查是否是默认头像
-        QRegularExpression regex("^:/res/head_(\\d+)\\.jpg$");
-        QRegularExpressionMatch match = regex.match(self_info->_icon);
-        if (match.hasMatch()) {
-            pChatItem->setUserIcon(QPixmap(self_info->_icon));
-        }
-        else {
-            // 如果是用户上传的头像，获取存储目录
-            QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-            QDir avatarsDir(storageDir + "/avatars");
-            auto file_name = QFileInfo(self_info->_icon).fileName();
-            // 确保目录存在
-            if (avatarsDir.exists()) {
-                QString avatarPath = avatarsDir.filePath(file_name); // 获取上传头像的完整路径
-                QPixmap pixmap(avatarPath); // 加载上传的头像图片
-                if (!pixmap.isNull()) {
-                    pChatItem->setUserIcon(pixmap);
-                }
-                else {
-                    qWarning() << "无法加载上传的头像：" << avatarPath;
-                    auto icon_label = pChatItem->getIconLabel();
-                    UserMgr::GetInstance()->AddLabelToReset(avatarPath, icon_label);
-                    //先加载默认的
-                    QPixmap pixmap(":/res/head_1.jpg");
-                    QPixmap scaledPixmap = pixmap.scaled(icon_label->size(),
-                        Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
-                    icon_label->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
-                    icon_label->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
-
-                    //判断是否正在下载
-                    bool is_loading = UserMgr::GetInstance()->IsDownLoading(file_name);
-                    if (is_loading) {
-                        qWarning() << "正在下载: " << file_name;
-                    }
-                    else {
-                        //发送请求获取资源
-                        auto download_info = std::make_shared<DownloadInfo>();
-                        download_info->_name = file_name;
-                        download_info->_current_size = 0;
-                        download_info->_seq = 1;
-                        download_info->_total_size = 0;
-                        download_info->_client_path = avatarPath;
-                        //添加文件到管理者
-                        UserMgr::GetInstance()->AddDownloadFile(file_name, download_info);
-                        //发送消息
-                        FileTcpMgr::GetInstance()->SendDownloadInfo(download_info);
-                    }
-                }
-            }
-            else {
-                qWarning() << "头像存储目录不存在：" << avatarsDir.path();
-            }
-        }
-   
+        SetSelfIcon(pChatItem, self_info->_icon);
         QWidget* pBubble = nullptr;
         if (msg->GetMsgType() == ChatMsgType::TEXT) {
             pBubble = new TextBubble(role, msg->GetMsgContent());
@@ -226,16 +172,73 @@ void ChatPage::UpdateChatStatus(QString unique_id, int status)
     }
 }
 
+void ChatPage::SetSelfIcon(ChatItemBase* pChatItem, QString icon)
+{
+    // 使用正则表达式检查是否是默认头像
+    QRegularExpression regex("^:/res/head_(\\d+)\\.jpg$");
+    QRegularExpressionMatch match = regex.match(icon);
+    if (match.hasMatch()) {
+        pChatItem->setUserIcon(QPixmap(icon));
+    }
+    else {
+        // 如果是用户上传的头像，获取存储目录
+        QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir avatarsDir(storageDir + "/avatars");
+        auto file_name = QFileInfo(icon).fileName();
+        // 确保目录存在
+        if (avatarsDir.exists()) {
+            QString avatarPath = avatarsDir.filePath(file_name); // 获取上传头像的完整路径
+            QPixmap pixmap(avatarPath); // 加载上传的头像图片
+            if (!pixmap.isNull()) {
+                pChatItem->setUserIcon(pixmap);
+            }
+            else {
+                qWarning() << "无法加载上传的头像：" << avatarPath;
+                auto icon_label = pChatItem->getIconLabel();
+                UserMgr::GetInstance()->AddLabelToReset(avatarPath, icon_label);
+                //先加载默认的
+                QPixmap pixmap(":/res/head_1.jpg");
+                QPixmap scaledPixmap = pixmap.scaled(icon_label->size(),
+                    Qt::KeepAspectRatio, Qt::SmoothTransformation); // 将图片缩放到label的大小
+                icon_label->setPixmap(scaledPixmap); // 将缩放后的图片设置到QLabel上
+                icon_label->setScaledContents(true); // 设置QLabel自动缩放图片内容以适应大小
+
+                //判断是否正在下载
+                bool is_loading = UserMgr::GetInstance()->IsDownLoading(file_name);
+                if (is_loading) {
+                    qWarning() << "正在下载: " << file_name;
+                }
+                else {
+                    //发送请求获取资源
+                    auto download_info = std::make_shared<DownloadInfo>();
+                    download_info->_name = file_name;
+                    download_info->_current_size = 0;
+                    download_info->_seq = 1;
+                    download_info->_total_size = 0;
+                    download_info->_client_path = avatarPath;
+                    //添加文件到管理者
+                    UserMgr::GetInstance()->AddDownloadFile(file_name, download_info);
+                    //发送消息
+                    FileTcpMgr::GetInstance()->SendDownloadInfo(download_info);
+                }
+            }
+        }
+        else {
+            qWarning() << "头像存储目录不存在：" << avatarsDir.path();
+        }
+    }
+}
+
 void ChatPage::paintEvent(QPaintEvent *event)
 {
+    Q_UNUSED(event);
     QStyleOption opt;
     opt.init(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
-void ChatPage::on_send_btn_clicked()
-{
+void ChatPage::on_send_btn_clicked() {
     if (_chat_data == nullptr) {
         qDebug() << "friend_info is empty";
         return;
@@ -247,31 +250,31 @@ void ChatPage::on_send_btn_clicked()
     QString userName = user_info->_name;
     QString userIcon = user_info->_icon;
 
-    const QVector<MsgInfo>& msgList = pTextEdit->getMsgList();
+    const QVector<std::shared_ptr<MsgInfo>>& msgList = pTextEdit->getMsgList();
     QJsonObject textObj;
     QJsonArray textArray;
     int txt_size = 0;
     auto thread_id = _chat_data->GetThreadId();
-    for(int i=0; i<msgList.size(); ++i)
+    for (int i = 0; i < msgList.size(); ++i)
     {
         //消息内容长度不合规就跳过
-        if(msgList[i].content.length() > 1024){
+        if (msgList[i]->_text_or_url.length() > 1024) {
             continue;
         }
 
-        QString type = msgList[i].msgFlag;
-        ChatItemBase *pChatItem = new ChatItemBase(role);
+        MsgType type = msgList[i]->_msg_type;
+        ChatItemBase* pChatItem = new ChatItemBase(role);
         pChatItem->setUserName(userName);
-        pChatItem->setUserIcon(QPixmap(userIcon));
-        QWidget *pBubble = nullptr;
+        SetSelfIcon(pChatItem, user_info->_icon);
+        QWidget* pBubble = nullptr;
         //生成唯一id
         QUuid uuid = QUuid::createUuid();
         //转为字符串
         QString uuidString = uuid.toString();
-        if(type == "text")
-        {   
-            pBubble = new TextBubble(role, msgList[i].content);
-            if(txt_size + msgList[i].content.length()> 1024){
+        if (type == MsgType::TEXT_MSG)
+        {
+            pBubble = new TextBubble(role, msgList[i]->_text_or_url);
+            if (txt_size + msgList[i]->_text_or_url.length() > 1024) {
                 textObj["fromuid"] = user_info->_uid;
                 textObj["touid"] = _chat_data->GetOtherId();
                 textObj["thread_id"] = thread_id;
@@ -288,29 +291,83 @@ void ChatPage::on_send_btn_clicked()
 
             //将bubble和uid绑定，以后可以等网络返回消息后设置是否送达
             //_bubble_map[uuidString] = pBubble;
-            txt_size += msgList[i].content.length();
+            txt_size += msgList[i]->_text_or_url.length();
             QJsonObject obj;
-            QByteArray utf8Message = msgList[i].content.toUtf8();
+            QByteArray utf8Message = msgList[i]->_text_or_url.toUtf8();
             auto content = QString::fromUtf8(utf8Message);
             obj["content"] = content;
             obj["unique_id"] = uuidString;
             textArray.append(obj);
             //todo... 注意，此处先按私聊处理
-            auto txt_msg = std::make_shared<TextChatData>(uuidString, thread_id, ChatFormType::PRIVATE, 
+            auto txt_msg = std::make_shared<TextChatData>(uuidString, thread_id, ChatFormType::PRIVATE,
                 ChatMsgType::TEXT, content, user_info->_uid, 0);
             //将未回复的消息加入到未回复列表中，以便后续处理
-            _chat_data->AppendUnRspMsg(uuidString,txt_msg);
+            _chat_data->AppendUnRspMsg(uuidString, txt_msg);
         }
-        else if(type == "image")
+        else if (type == MsgType::IMG_MSG)
         {
-             pBubble = new PictureBubble(QPixmap(msgList[i].content) , role);
+            //将之前缓存的文本发送过去
+            if (txt_size) {
+                textObj["fromuid"] = user_info->_uid;
+                textObj["touid"] = _chat_data->GetOtherId();
+                textObj["thread_id"] = thread_id;
+                textObj["text_array"] = textArray;
+                QJsonDocument doc(textObj);
+                QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+                //发送并清空之前累计的文本列表
+                txt_size = 0;
+                textArray = QJsonArray();
+                textObj = QJsonObject();
+                //发送tcp请求给chat server
+                emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_TEXT_CHAT_MSG_REQ, jsonData);
+            }
+
+            pBubble = new PictureBubble(QPixmap(msgList[i]->_text_or_url), role);
+            //需要组织成文件发送，具体参考头像上传
+            auto img_msg = std::make_shared<ImgChatData>(msgList[i],uuidString, thread_id, ChatFormType::PRIVATE,
+                ChatMsgType::TEXT, user_info->_uid, 0);
+            //将未回复的消息加入到未回复列表中，以便后续处理
+            _chat_data->AppendUnRspMsg(uuidString, img_msg);
+            textObj["fromuid"] = user_info->_uid;
+            textObj["touid"] = _chat_data->GetOtherId();
+            textObj["thread_id"] = thread_id;
+            textObj["md5"] = msgList[i]->_md5;
+            textObj["name"] = msgList[i]->_unique_name;
+            textObj["token"] = UserMgr::GetInstance()->GetToken();
+            textObj["unique_id"] = uuidString;
+            //创建QFileInfo 对象 todo 留作以后收到服务器返回消息后再发送
+           /* QFile file(msgList[i]->_text_or_url);
+            file.seek(msgList[i]->_current_size);
+            auto buffer = file.read(MAX_FILE_LEN);
+            msgList[i]->_seq++;
+            QJsonObject file_obj;
+            file_obj["name"] = msgList[i]->_unique_name;
+            file_obj["unique_id"] = uuidString;
+            file_obj["seq"] = msgList[i]->_seq;
+            msgList[i]->_current_size = buffer.size() + (msgList[i]->_seq - 1) * MAX_FILE_LEN;
+            file_obj["trans_size"] = msgList[i]->_current_size;
+            file_obj["total_size"] = msgList[i]->_total_size;
+            file_obj["token"] = UserMgr::GetInstance()->GetToken();*/
+            //文件信息加入管理
+            UserMgr::GetInstance()->AddTransFile(msgList[i]->_unique_name, msgList[i]);
+            QJsonDocument doc(textObj);
+            QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+            //发送tcp请求给chat server
+            emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_IMG_CHAT_MSG_REQ, jsonData);
+
+            //发送文件  todo 留作以后收到服务器返回消息后再发送
+            //QJsonDocument doc_file(file_obj);
+            //QByteArray fileData = doc_file.toJson(QJsonDocument::Compact);
+            ////发送tcp请求给资源服务器
+            //emit FileTcpMgr::GetInstance()->sig_send_data(ReqId::ID_IMG_CHAT_UPLOAD_REQ, fileData);
+
         }
-        else if(type == "file")
+        else if (type == MsgType::FILE_MSG)
         {
 
         }
         //发送消息
-        if(pBubble != nullptr)
+        if (pBubble != nullptr)
         {
             pChatItem->setWidget(pBubble);
             pChatItem->setStatus(0);
@@ -320,21 +377,24 @@ void ChatPage::on_send_btn_clicked()
 
     }
 
-    qDebug() << "textArray is " << textArray ;
-    //发送给服务器
-    textObj["text_array"] = textArray;
-    textObj["fromuid"] = user_info->_uid;
-    textObj["touid"] = _chat_data->GetOtherId();
-    textObj["thread_id"] = thread_id;
-    QJsonDocument doc(textObj);
-    QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
-    //发送并清空之前累计的文本列表
-    txt_size = 0;
-    textArray = QJsonArray();
-    textObj = QJsonObject();
-    //发送tcp请求给chat server
-    emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_TEXT_CHAT_MSG_REQ, jsonData);
+    if (txt_size > 0) {
+        qDebug() << "textArray is " << textArray;
+        //发送给服务器
+        textObj["text_array"] = textArray;
+        textObj["fromuid"] = user_info->_uid;
+        textObj["touid"] = _chat_data->GetOtherId();
+        textObj["thread_id"] = thread_id;
+        QJsonDocument doc(textObj);
+        QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+        //发送并清空之前累计的文本列表
+        txt_size = 0;
+        textArray = QJsonArray();
+        textObj = QJsonObject();
+        //发送tcp请求给chat server
+        emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_TEXT_CHAT_MSG_REQ, jsonData);
+    }
 }
+
 
 void ChatPage::on_receive_btn_clicked()
 {
@@ -344,23 +404,23 @@ void ChatPage::on_receive_btn_clicked()
     QString userName = friend_info->_name;
     QString userIcon = friend_info->_icon;
 
-    const QVector<MsgInfo>& msgList = pTextEdit->getMsgList();
+    const QVector<std::shared_ptr<MsgInfo>>& msgList = pTextEdit->getMsgList();
     for(int i=0; i<msgList.size(); ++i)
     {
-        QString type = msgList[i].msgFlag;
+        MsgType type = msgList[i]->_msg_type;
         ChatItemBase *pChatItem = new ChatItemBase(role);
         pChatItem->setUserName(userName);
         pChatItem->setUserIcon(QPixmap(userIcon));
         QWidget *pBubble = nullptr;
-        if(type == "text")
+        if(type == MsgType::TEXT_MSG)
         {
-            pBubble = new TextBubble(role, msgList[i].content);
+            pBubble = new TextBubble(role, msgList[i]->_text_or_url);
         }
-        else if(type == "image")
+        else if(type == MsgType::IMG_MSG)
         {
-            pBubble = new PictureBubble(QPixmap(msgList[i].content) , role);
+            pBubble = new PictureBubble(QPixmap(msgList[i]->_text_or_url) , role);
         }
-        else if(type == "file")
+        else if(type == MsgType::FILE_MSG)
         {
 
         }

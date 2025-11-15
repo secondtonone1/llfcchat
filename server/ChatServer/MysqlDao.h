@@ -259,6 +259,7 @@ public:
 	bool CreatePrivateChat(int user1_id, int user2_id, int& thread_id);
 	std::shared_ptr<PageResult> LoadChatMsg(int threadId, int lastId, int pageSize);
 	bool AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas);
+	bool AddChatMsg(std::shared_ptr<ChatMessage> chat_data);
 private:
 	std::unique_ptr<MySqlPool> pool_;
 };

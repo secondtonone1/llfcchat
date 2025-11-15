@@ -1,4 +1,4 @@
-#ifndef TCPMGR_H
+ï»¿#ifndef TCPMGR_H
 #define TCPMGR_H
 #include <QTcpSocket>
 #include "singleton.h"
@@ -42,13 +42,13 @@ private:
     quint16 _message_id;
     quint16 _message_len;
     QMap<ReqId, std::function<void(ReqId id, int len, QByteArray data)>> _handlers;
-    //·¢ËÍ¶ÓÁĞ
+    //å‘é€é˜Ÿåˆ—
     QQueue<QByteArray> _send_queue;
-    //ÕıÔÚ·¢ËÍµÄ°ü
+    //æ­£åœ¨å‘é€çš„åŒ…
     QByteArray  _current_block;
-    //µ±Ç°ÒÑ·¢ËÍµÄ×Ö½ÚÊı
+    //å½“å‰å·²å‘é€çš„å­—èŠ‚æ•°
     qint64        _bytes_sent;
-    //ÊÇ·ñÕıÔÚ·¢ËÍ
+    //æ˜¯å¦æ­£åœ¨å‘é€
     bool _pending;
 public slots:
     void slot_tcp_close();
@@ -79,6 +79,7 @@ signals:
         std::vector<std::shared_ptr<TextChatData>> msg_list);
 
     void sig_chat_msg_rsp(int thread_id, std::vector<std::shared_ptr<TextChatData>> msg_list);
+    void sig_chat_img_rsp(int thread_id, std::shared_ptr<ImgChatData> msg_list);
 };
 
 #endif // TCPMGR_H

@@ -10,7 +10,8 @@ PictureBubble::PictureBubble(const QPixmap &picture, ChatRole role, QWidget *par
 {
     QLabel *lb = new QLabel();
     lb->setScaledContents(true);
-    QPixmap pix = picture.scaled(QSize(PIC_MAX_WIDTH, PIC_MAX_HEIGHT), Qt::KeepAspectRatio);
+    QPixmap pix = picture.scaled(QSize(PIC_MAX_WIDTH, PIC_MAX_HEIGHT), 
+        Qt::KeepAspectRatio, Qt::SmoothTransformation);
     lb->setPixmap(pix);
     this->setWidget(lb);
 

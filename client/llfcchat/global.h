@@ -56,6 +56,12 @@ enum ReqId{
     ID_UPLOAD_HEAD_ICON_RSP  = 1032,      //上传头像回复
     ID_DOWN_LOAD_FILE_REQ = 1033,             //下载文件请求
     ID_DOWN_LOAD_FILE_RSP = 1034,           //下载文件回复
+    ID_IMG_CHAT_MSG_REQ = 1035,            //图片聊天消息请求
+    ID_IMG_CHAT_MSG_RSP = 1036,           //图片聊天信息回复
+    ID_IMG_CHAT_UPLOAD_REQ = 1037,        //上传聊天图片资源
+    ID_IMG_CHAT_UPLOAD_RSP = 1038,        //上传聊天图片资源回复
+
+    ID_NOTIFY_IMG_CHAT_MSG_REQ = 1039   //通知用户图片聊天信息
 };
 Q_DECLARE_METATYPE(ReqId)
 
@@ -113,10 +119,29 @@ enum class ChatRole
     Other
 };
 
+enum class MsgType {
+    TEXT_MSG = 0, //文本消息
+    IMG_MSG = 1,  //图片消息
+    VIDEO_MSG = 2, //视频消息
+    FILE_MSG = 3//文件消息,
+};
+
+
 struct MsgInfo{
-    QString msgFlag;//"text,image,file"
-    QString content;//表示文件和图像的url,文本信息
-    QPixmap pixmap;//文件和图片的缩略图
+
+    MsgInfo(MsgType msgtype, QString text_or_url, QPixmap pixmap, QString unique_name, qint64 total_size, QString md5)
+    :_msg_type(msgtype), _text_or_url(text_or_url), _preview_pix(pixmap),_unique_name(unique_name),_total_size(total_size),
+        _current_size(0),_seq(1),_md5(md5)
+    {}
+
+    MsgType _msg_type;   //消息类型, 文本，图片，视频，文件
+    QString _text_or_url;//表示文件和图像的url,文本信息
+    QPixmap _preview_pix;//文件和图片的缩略图
+    QString _unique_name; //文件唯一名字
+    qint64 _total_size; //文件总大小
+    qint64 _current_size; //传输大小
+    qint64 _seq;          //传输序号
+    QString _md5;         //文件md5
 };
 
 //聊天界面几种模式
@@ -177,7 +202,8 @@ const int CHAT_COUNT_PER_PAGE = 13;
 enum MsgStatus{
     UN_READ = 0,  //对方未读
     SEND_FAILED = 1,  //发送失败
-    READED = 2  //对方已读
+    READED = 2,  //对方已读
+    UN_UPLOAD = 3 //未上传完成
 };
 
 //聊天形式，私聊和群聊
@@ -212,5 +238,7 @@ struct DownloadInfo {
     int _seq;
     QString _client_path;
 };
+
+extern QString calculateFileHash(const QString& filePath);
 
 #endif // GLOBAL_H

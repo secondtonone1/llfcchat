@@ -33,3 +33,5 @@ ui_*.h
 /server/VarifyServer/.idea
 /server/ChatServer/*.log
 /client/llfcchat/llfcchat.pro.user.92bdd7d
+client/llfcchat/release/
+

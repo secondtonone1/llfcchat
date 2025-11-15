@@ -234,6 +234,9 @@ ChatDialog::ChatDialog(QWidget* parent) :
 		this, &ChatDialog::slot_load_chat_msg);
 
 	connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_chat_msg_rsp, this, &ChatDialog::slot_add_chat_msg);
+
+	//连接tcp返回的图片聊天信息回复
+	connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_chat_img_rsp, this, &ChatDialog::slot_add_img_msg);
 	//重置label icon
 	connect(FileTcpMgr::GetInstance().get(), &FileTcpMgr::sig_reset_label_icon, this, &ChatDialog::slot_reset_icon);
 }
@@ -532,6 +535,22 @@ void ChatDialog::slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<Te
 		//更新聊天界面信息
 		ui->chat_page->UpdateChatStatus(msg->GetUniqueId(),msg->GetStatus());
 	}	
+}
+
+void ChatDialog::slot_add_img_msg(int thread_id, std::shared_ptr<ImgChatData> img_msg) {
+	auto chat_data = UserMgr::GetInstance()->GetChatThreadByThreadId(thread_id);
+	if (chat_data == nullptr) {
+		return;
+	}
+
+	chat_data->MoveMsg(img_msg);
+
+	if (_cur_chat_thread_id != thread_id) {
+		return;
+	}
+
+	//更新聊天界面信息
+	ui->chat_page->UpdateChatStatus(img_msg->GetUniqueId(), img_msg->GetStatus());
 }
 
 void ChatDialog::slot_reset_icon(QString path) {

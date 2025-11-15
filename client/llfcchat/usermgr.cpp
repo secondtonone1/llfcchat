@@ -452,5 +452,19 @@ void UserMgr::ResetLabelIcon(QString path)
    _path_to_reset_labels.erase(iter);
 }
 
+void UserMgr::AddTransFile(QString name, std::shared_ptr<MsgInfo> msg_info)
+{
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    _name_to_msg_info[name] = msg_info;
+}
 
+std::shared_ptr<MsgInfo> UserMgr::GetTransFileByName(QString name) {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    auto iter = _name_to_msg_info.find(name);
+    if (iter == _name_to_msg_info.end()) {
+        return nullptr;
+    }
+
+    return *iter;
+}
 

@@ -19,6 +19,7 @@ public:
     void SetChatData(std::shared_ptr<ChatThreadData> chat_data);
     void AppendChatMsg(std::shared_ptr<ChatDataBase> msg);
     void UpdateChatStatus(QString unique_id, int status);
+    void SetSelfIcon(ChatItemBase* pChatItem, QString icon);
 protected:
     void paintEvent(QPaintEvent *event);
 private slots:

@@ -229,7 +229,7 @@ extern QString generateUniqueIconName();
 //TCP 长度字段的长度
 #define FILE_UPLOAD_LEN_LEN 4
 //最大文件长度
-#define MAX_FILE_LEN 2048
+#define MAX_FILE_LEN 4096
 
 struct DownloadInfo {
     QString _name;

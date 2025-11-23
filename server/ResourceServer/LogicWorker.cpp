@@ -125,10 +125,16 @@ void LogicWorker::RegisterCallBacks()
 				file_info->_total_size = total_size;
 				file_info->_trans_size = trans_size;
 				//todo... 后期改为redis,以及mysql 持久化存储
-				LogicSystem::GetInstance()->AddMD5File(md5, file_info);
+				bool success = RedisMgr::GetInstance()->SetFileInfo(md5, file_info);
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::FileSaveRedisFailed;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_UPLOAD_HEAD_ICON_RSP);
+					return;
+				}
 			}
 			else {
-				auto file_info = LogicSystem::GetInstance()->GetFileInfo(md5);
+				auto file_info = RedisMgr::GetInstance()->GetFileInfo(md5);
 				if (file_info == nullptr) {
 					rtvalue["error"] = ErrorCodes::FileNotExists;
 					std::string return_str = rtvalue.toStyledString();
@@ -137,11 +143,18 @@ void LogicWorker::RegisterCallBacks()
 				}
 				file_info->_seq = seq;
 				file_info->_trans_size = trans_size;
+				bool success = RedisMgr::GetInstance()->SetFileInfo(md5, file_info);
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::FileSaveRedisFailed;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_UPLOAD_FILE_RSP);
+					return;
+				}
 			}
 
 
 			FileSystem::GetInstance()->PostMsgToQue(
-				std::make_shared<FileTask>(session, uid, file_path_str, name, seq, total_size,
+				std::make_shared<FileTask>(session, ID_UPLOAD_FILE_REQ, uid, file_path_str, name, seq, total_size,
 					trans_size, last, file_data, callback),
 				index
 			);
@@ -287,7 +300,7 @@ void LogicWorker::RegisterCallBacks()
 
 
 			FileSystem::GetInstance()->PostMsgToQue(
-				std::make_shared<FileTask>(session, uid, file_path_str, name, seq, total_size,
+				std::make_shared<FileTask>(session, ID_UPLOAD_HEAD_ICON_REQ, uid, file_path_str, name, seq, total_size,
 					trans_size, last, file_data, callback),
 				index
 			);
@@ -356,7 +369,90 @@ void LogicWorker::RegisterCallBacks()
 
 	};
 
+	_fun_callbacks[ID_IMG_CHAT_UPLOAD_REQ] = [this](shared_ptr<CSession> session, const short& msg_id,
+		const string& msg_data) {
+			Json::Reader reader;
+			Json::Value root;
+			reader.parse(msg_data, root);
+			auto md5 = root["md5"].asString();
+			auto seq = root["seq"].asInt();
+			auto name = root["name"].asString();
+			auto total_size = root["total_size"].asInt();
+			auto trans_size = root["trans_size"].asInt();
+			auto last = root["last"].asInt();
+			auto file_data = root["data"].asString();
+			auto file_path = ConfigMgr::Inst().GetFileOutPath();
+			auto uid = root["uid"].asInt();
+			//转化为字符串
+			auto uid_str = std::to_string(uid);
+			auto file_path_str = (file_path / uid_str / name).string();
+			Json::Value  rtvalue;
 
+			auto callback = [=](const Json::Value& result) {
+
+				// 在异步任务完成后调用
+				Json::Value rtvalue = result;
+				rtvalue["error"] = ErrorCodes::Success;
+				rtvalue["total_size"] = total_size;
+				rtvalue["seq"] = seq;
+				rtvalue["name"] = name;
+				rtvalue["trans_size"] = trans_size;
+				rtvalue["last"] = last;
+				rtvalue["md5"] = md5;
+				rtvalue["uid"] = uid;
+				std::string return_str = rtvalue.toStyledString();
+				session->Send(return_str, ID_IMG_CHAT_UPLOAD_RSP);
+			};
+
+			// 使用 std::hash 对字符串进行哈希
+			std::hash<std::string> hash_fn;
+			size_t hash_value = hash_fn(name); // 生成哈希值
+			int index = hash_value % FILE_WORKER_COUNT;
+			std::cout << "Hash value: " << hash_value << std::endl;
+
+			//第一个包
+			if (seq == 1) {
+				//构造数据存储
+				auto file_info = std::make_shared<FileInfo>();
+				file_info->_file_path_str = file_path_str;
+				file_info->_name = name;
+				file_info->_seq = seq;
+				file_info->_total_size = total_size;
+				file_info->_trans_size = trans_size;
+				bool success = RedisMgr::GetInstance()->SetFileInfo(name, file_info);
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::FileSaveRedisFailed;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_UPLOAD_HEAD_ICON_RSP);
+					return;
+				}
+			}
+			else {
+				auto file_info = RedisMgr::GetInstance()->GetFileInfo(name);
+				if (file_info == nullptr) {
+					rtvalue["error"] = ErrorCodes::FileNotExists;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_UPLOAD_HEAD_ICON_RSP);
+					return;
+				}
+				file_info->_seq = seq;
+				file_info->_trans_size = trans_size;
+				bool success = RedisMgr::GetInstance()->SetFileInfo(name, file_info);
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::FileSaveRedisFailed;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_UPLOAD_HEAD_ICON_RSP);
+					return;
+				}
+			}
+
+
+			FileSystem::GetInstance()->PostMsgToQue(
+				std::make_shared<FileTask>(session, ID_IMG_CHAT_UPLOAD_REQ, uid, file_path_str, name, seq, total_size,
+					trans_size, last, file_data, callback),
+				index
+			);
+	};	
 }
 
 void LogicWorker::task_callback(std::shared_ptr<LogicNode> task)

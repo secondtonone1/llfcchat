@@ -66,6 +66,7 @@ public:
     void ResetLabelIcon(QString path);
     void AddTransFile(QString name, std::shared_ptr<MsgInfo> msg_info);
     std::shared_ptr<MsgInfo> GetTransFileByName(QString name);
+    void RmvTransFileByName(QString name);
 
 private:
     UserMgr();

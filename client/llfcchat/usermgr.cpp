@@ -468,3 +468,12 @@ std::shared_ptr<MsgInfo> UserMgr::GetTransFileByName(QString name) {
     return *iter;
 }
 
+void UserMgr::RmvTransFileByName(QString name) {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    auto iter = _name_to_msg_info.find(name);
+    if (iter == _name_to_msg_info.end()) {
+        return ;
+    }
+
+    _name_to_msg_info.erase(iter);
+}

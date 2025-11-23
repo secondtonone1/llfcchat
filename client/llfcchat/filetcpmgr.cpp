@@ -236,7 +236,7 @@ void FileTcpMgr::SendData(ReqId reqId, QByteArray data)
 
 void FileTcpMgr::initHandlers()
 {
-    //todo 接收上传用户头像回复
+    // 接收上传用户头像回复
     _handlers.insert(ID_UPLOAD_HEAD_ICON_RSP, [this](ReqId id, int len, QByteArray data){
         Q_UNUSED(len);
         qDebug()<< "handle id is "<< id ;
@@ -297,7 +297,7 @@ void FileTcpMgr::initHandlers()
         file.seek(trans_size);
         QByteArray buffer;
         seq ++;
-        //每次读取2048字节发送
+        //每次读取MAX_FILE_LEN字节发送
         buffer = file.read(MAX_FILE_LEN);
         QJsonObject sendObj;
         //将文件内容转换为base64编码
@@ -417,6 +417,94 @@ void FileTcpMgr::initHandlers()
             FileTcpMgr::GetInstance()->SendDownloadInfo(file_info);
         }
     });
+
+    _handlers.insert(ID_IMG_CHAT_UPLOAD_RSP, [this](ReqId id, int len, QByteArray data) {
+        Q_UNUSED(len);
+        qDebug() << "handle id is " << id;
+        // 将QByteArray转换为QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+        // 检查转换是否成功
+        if (jsonDoc.isNull()) {
+            qDebug() << "Failed to create QJsonDocument.";
+            return;
+        }
+
+        QJsonObject recvObj = jsonDoc.object();
+        qDebug() << "data jsonobj is " << recvObj;
+
+        if (!recvObj.contains("error")) {
+            int err = ErrorCodes::ERR_JSON;
+            qDebug() << "icon upload_failed, err is Json Parse Err" << err;
+            //todo ... 提示上传失败
+            //emit upload_failed();
+            return;
+        }
+
+        int err = recvObj["error"].toInt();
+        if (err != ErrorCodes::SUCCESS) {
+            qDebug() << "Login Failed, err is " << err;
+            //emit upload_failed();
+            return;
+        }
+
+        auto md5 = recvObj["md5"].toString();
+        auto seq = recvObj["seq"].toInt();
+        auto trans_size = recvObj["trans_size"].toInt();
+        auto uid = recvObj["uid"].toInt();
+        auto total_size = recvObj["total_size"].toInt();
+        auto name = recvObj["name"].toString();
+
+        qDebug() << "recv : " << name << "file trans_size is " << trans_size;
+        //判断trans_size和total_size相等
+        if (total_size == trans_size) {
+            UserMgr::GetInstance()->RmvTransFileByName(name);
+            return;
+        }
+
+        auto file_info = UserMgr::GetInstance()->GetTransFileByName(name);
+        if (!file_info) {
+            return;
+        }
+
+        //再次组织数据发送
+        QFile file(file_info->_text_or_url);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Could not open file: " << file.errorString();
+            return;
+        }
+
+        //文件偏移到已经发送的位置，继续读取发送
+        file.seek(trans_size);
+        QByteArray buffer;
+        seq++;
+        //每次读取MAX_FILE_LEN字节发送
+        buffer = file.read(MAX_FILE_LEN);
+        QJsonObject sendObj;
+        //将文件内容转换为base64编码
+        QString base64Data = buffer.toBase64();
+        sendObj["md5"] = md5;
+        sendObj["name"] = name;
+        sendObj["seq"] = seq;
+        sendObj["trans_size"] = buffer.size() + (seq - 1) * MAX_FILE_LEN;
+        sendObj["total_size"] = total_size;
+
+        if (buffer.size() + (seq - 1) * MAX_FILE_LEN >= total_size) {
+            sendObj["last"] = 1;
+        }
+        else {
+            sendObj["last"] = 0;
+        }
+
+        sendObj["data"] = base64Data;
+        sendObj["last_seq"] = recvObj["last_seq"].toInt();
+        sendObj["uid"] = uid;
+        QJsonDocument doc(sendObj);
+        auto send_data = doc.toJson();
+        SendData(ID_IMG_CHAT_UPLOAD_REQ, send_data);
+
+        file.close();
+        });
 }
 
 

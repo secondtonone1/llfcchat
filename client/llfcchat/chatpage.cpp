@@ -335,31 +335,14 @@ void ChatPage::on_send_btn_clicked() {
             textObj["name"] = msgList[i]->_unique_name;
             textObj["token"] = UserMgr::GetInstance()->GetToken();
             textObj["unique_id"] = uuidString;
-            //创建QFileInfo 对象 todo 留作以后收到服务器返回消息后再发送
-           /* QFile file(msgList[i]->_text_or_url);
-            file.seek(msgList[i]->_current_size);
-            auto buffer = file.read(MAX_FILE_LEN);
-            msgList[i]->_seq++;
-            QJsonObject file_obj;
-            file_obj["name"] = msgList[i]->_unique_name;
-            file_obj["unique_id"] = uuidString;
-            file_obj["seq"] = msgList[i]->_seq;
-            msgList[i]->_current_size = buffer.size() + (msgList[i]->_seq - 1) * MAX_FILE_LEN;
-            file_obj["trans_size"] = msgList[i]->_current_size;
-            file_obj["total_size"] = msgList[i]->_total_size;
-            file_obj["token"] = UserMgr::GetInstance()->GetToken();*/
+            textObj["text_or_url"] = msgList[i]->_text_or_url;
+
             //文件信息加入管理
             UserMgr::GetInstance()->AddTransFile(msgList[i]->_unique_name, msgList[i]);
             QJsonDocument doc(textObj);
             QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
             //发送tcp请求给chat server
             emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_IMG_CHAT_MSG_REQ, jsonData);
-
-            //发送文件  todo 留作以后收到服务器返回消息后再发送
-            //QJsonDocument doc_file(file_obj);
-            //QByteArray fileData = doc_file.toJson(QJsonDocument::Compact);
-            ////发送tcp请求给资源服务器
-            //emit FileTcpMgr::GetInstance()->sig_send_data(ReqId::ID_IMG_CHAT_UPLOAD_REQ, fileData);
 
         }
         else if (type == MsgType::FILE_MSG)

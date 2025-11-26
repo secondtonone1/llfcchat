@@ -245,6 +245,7 @@ public:
 	bool AddFriendApply(const int& from, const int& to, const std::string& desc, const std::string& back_name);
 	bool AuthFriendApply(const int& from, const int& to);
 	bool AddFriend(const int& from, const int& to, std::string back_name, std::vector<std::shared_ptr<AddFriendMsg>> &chat_datas);
+	
 	std::shared_ptr<UserInfo> GetUser(int uid);
 	std::shared_ptr<UserInfo> GetUser(std::string name);
 	bool GetApplyList(int touid, std::vector<std::shared_ptr<ApplyInfo>>& applyList, int offset, int limit );

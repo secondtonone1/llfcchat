@@ -42,7 +42,7 @@ private:
 	std::function<void()> func_;
 };
 
-#define MAX_LENGTH  1024*6
+#define MAX_LENGTH  1024*50
 //头部总长度
 #define HEAD_TOTAL_LEN 6
 //头部id长度
@@ -75,6 +75,9 @@ enum MSG_IDS {
 
 	ID_IMG_CHAT_UPLOAD_REQ = 1037,        //上传聊天图片资源
 	ID_IMG_CHAT_UPLOAD_RSP = 1038,        //上传聊天图片资源回复
+	ID_NOTIFY_IMG_CHAT_MSG_REQ = 1039, //通知用户图片聊天信息
+	ID_FILE_INFO_SYNC_REQ = 1041,      //文件信息同步请求
+	ID_FILE_INFO_SYNC_RSP = 1042       //文件信息同步回复
 };
 
 #define USERIPPREFIX  "uip_"
@@ -94,6 +97,6 @@ enum MSG_IDS {
 #define ACQUIRE_TIME_OUT 5
 
 //最大传输文件的大小
-#define MAX_FILE_LEN 4096
+#define MAX_FILE_LEN 1024*32
 
 

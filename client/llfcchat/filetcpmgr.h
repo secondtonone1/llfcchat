@@ -11,6 +11,7 @@
 #include <memory>
 #include <QThread>
 #include <QQueue>
+#include <memory>
 
 
 class FileTcpThread: public std::enable_shared_from_this<FileTcpThread>{
@@ -32,6 +33,7 @@ public:
     void SendData(ReqId reqId, QByteArray data);
     void CloseConnection();
     void SendDownloadInfo(std::shared_ptr<DownloadInfo> download);
+    void BatchSend(std::shared_ptr<MsgInfo> msg_info);
 private:
     void initHandlers();
     explicit FileTcpMgr(QObject *parent = nullptr);
@@ -55,6 +57,8 @@ private:
     qint64        _bytes_sent;
     //是否正在发送
     bool _pending;
+    //发送的拥塞窗口，控制发送数量
+    int _cwnd_size;
 signals:
     void sig_close();
      void sig_send_data(ReqId reqId, QByteArray data);

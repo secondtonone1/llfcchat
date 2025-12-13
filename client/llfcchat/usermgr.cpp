@@ -477,3 +477,12 @@ void UserMgr::RmvTransFileByName(QString name) {
 
     _name_to_msg_info.erase(iter);
 }
+
+std::shared_ptr<MsgInfo> UserMgr::GetFreeTransFile() {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    if (_name_to_download_info.isEmpty()) {
+        return nullptr;
+    }
+
+    _name_to_msg_info.begin().value();
+}

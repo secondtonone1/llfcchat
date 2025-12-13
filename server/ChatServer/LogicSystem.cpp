@@ -110,6 +110,7 @@ void LogicSystem::RegisterCallBacks() {
 
 	_fun_callbacks[ID_IMG_CHAT_MSG_REQ] = std::bind(&LogicSystem::DealChatImgMsg, this,
 		placeholders::_1, placeholders::_2, placeholders::_3);
+
 }
 
 void LogicSystem::LoginHandler(shared_ptr<CSession> session, const short &msg_id, const string &msg_data) {
@@ -913,7 +914,6 @@ void LogicSystem::LoadChatMsg(std::shared_ptr<CSession> session,
 
 }
 
-
 void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session, 
 	const short& msg_id, const string& msg_data) {
 	Json::Reader reader;
@@ -962,6 +962,5 @@ void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session,
 		session->Send(return_str, ID_IMG_CHAT_MSG_RSP);
 		});
 
-
-	//发送通知 todo... 以后等文件上传完成再通知
 }
+

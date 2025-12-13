@@ -48,6 +48,7 @@ private:
 	void CreatePrivateChat(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data);
 	void LoadChatMsg(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data);
 	void DealChatImgMsg(std::shared_ptr<CSession> session, const short& msg_id, const string& msg_data);
+	
 	std::thread _worker_thread;
 	std::queue<shared_ptr<LogicNode>> _msg_que;
 	std::mutex _mutex;

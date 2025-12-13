@@ -795,14 +795,17 @@ void TcpMgr::initHandlers()
 
         //发送信号通知界面
         emit sig_chat_img_rsp(thread_id, chat_data);
+
+        //管理消息，添加序列号到正在发送集合
+        file_info->_flighting_seqs.insert(file_info->_seq);
         
-        //创建QFileInfo 对象 todo 留作以后收到服务器返回消息后再发送
+        //发送消息
         QFile file(file_info->_text_or_url);
         if (!file.open(QIODevice::ReadOnly)) {
             qWarning() << "Could not open file:" << file.errorString();
             return;
         }
-
+        
         file.seek(file_info->_current_size);
         auto buffer = file.read(MAX_FILE_LEN);
         qDebug() << "buffer is " << buffer;
@@ -832,7 +835,7 @@ void TcpMgr::initHandlers()
 		QByteArray fileData = doc_file.toJson(QJsonDocument::Compact);
 
         //发送消息给ResourceServer
-        FileTcpMgr::GetInstance()->SendData(ReqId::ID_IMG_CHAT_UPLOAD_REQ, fileData); 
+        FileTcpMgr::GetInstance()->SendData(ReqId::ID_FILE_INFO_SYNC_REQ, fileData);
 
         });
     

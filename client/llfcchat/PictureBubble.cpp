@@ -98,12 +98,14 @@ void PictureBubble::resumeState() {
     if (_msg_info->_transfer_type == TransferType::Download) {
         _msg_info->_transfer_state = TransferState::Downloading;
         m_state = TransferState::Downloading;
+        updateIconOverlay();
         return;
     }
 
     if (_msg_info->_transfer_type == TransferType::Upload) {
         _msg_info->_transfer_state = TransferState::Uploading;
         m_state = TransferState::Uploading;
+        updateIconOverlay();
         return;
     }
 }

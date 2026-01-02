@@ -77,7 +77,9 @@ enum MSG_IDS {
 	ID_IMG_CHAT_UPLOAD_RSP = 1038,        //上传聊天图片资源回复
 	ID_NOTIFY_IMG_CHAT_MSG_REQ = 1039, //通知用户图片聊天信息
 	ID_FILE_INFO_SYNC_REQ = 1041,      //文件信息同步请求
-	ID_FILE_INFO_SYNC_RSP = 1042       //文件信息同步回复
+	ID_FILE_INFO_SYNC_RSP = 1042,       //文件信息同步回复
+	ID_IMG_CHAT_CONTINUE_UPLOAD_REQ = 1043,  //续传聊天图片资源请求
+	ID_IMG_CHAT_CONTINUE_UPLOAD_RSP = 1044  //续传聊天图片资源回复
 };
 
 #define USERIPPREFIX  "uip_"

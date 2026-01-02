@@ -941,7 +941,7 @@ void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session,
 	rtvalue["unique_name"] = unique_name;
 	rtvalue["unique_id"] = unique_id;
 	rtvalue["chat_time"] = chat_time;
-	rtvalue["status"] = status;
+	rtvalue["status"] = MsgStatus::UN_UPLOAD;
 
 	auto timestamp = getCurrentTimestamp();
 	auto chat_msg = std::make_shared<ChatMessage>();

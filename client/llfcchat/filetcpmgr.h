@@ -12,7 +12,7 @@
 #include <QThread>
 #include <QQueue>
 #include <memory>
-
+#include "global.h"
 
 class FileTcpThread: public std::enable_shared_from_this<FileTcpThread>{
 public:
@@ -34,6 +34,7 @@ public:
     void CloseConnection();
     void SendDownloadInfo(std::shared_ptr<DownloadInfo> download);
     void BatchSend(std::shared_ptr<MsgInfo> msg_info);
+    void ContinueUploadFile(QString unique_name);
 private:
     void initHandlers();
     explicit FileTcpMgr(QObject *parent = nullptr);
@@ -65,10 +66,13 @@ signals:
      void sig_con_success(bool bsuccess);
      void sig_connection_closed();
      void sig_reset_label_icon(QString path);
+     void sig_update_upload_progress(std::shared_ptr<MsgInfo>);
+     void sig_continue_upload_file(QString unique_name);
 public slots:
     void slot_send_data(ReqId reqId, QByteArray data);
     void slot_tcp_connect(std::shared_ptr<ServerInfo> si);
     void slot_tcp_close();
+    void slot_continue_upload_file(QString unique_name);
 };
 
 #endif // FILETCPMGR_H

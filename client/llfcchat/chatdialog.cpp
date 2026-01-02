@@ -239,6 +239,9 @@ ChatDialog::ChatDialog(QWidget* parent) :
 	connect(TcpMgr::GetInstance().get(), &TcpMgr::sig_chat_img_rsp, this, &ChatDialog::slot_add_img_msg);
 	//重置label icon
 	connect(FileTcpMgr::GetInstance().get(), &FileTcpMgr::sig_reset_label_icon, this, &ChatDialog::slot_reset_icon);
+	//接收tcp返回的上传进度信息
+	connect(FileTcpMgr::GetInstance().get(), &FileTcpMgr::sig_update_upload_progress, 
+		this, &ChatDialog::slot_update_upload_progress);
 }
 
 ChatDialog::~ChatDialog()
@@ -533,7 +536,7 @@ void ChatDialog::slot_add_chat_msg(int thread_id, std::vector<std::shared_ptr<Te
 			continue;
 		}
 		//更新聊天界面信息
-		ui->chat_page->UpdateChatStatus(msg->GetUniqueId(),msg->GetStatus());
+		ui->chat_page->UpdateChatStatus(msg);
 	}	
 }
 
@@ -550,7 +553,7 @@ void ChatDialog::slot_add_img_msg(int thread_id, std::shared_ptr<ImgChatData> im
 	}
 
 	//更新聊天界面信息
-	ui->chat_page->UpdateChatStatus(img_msg->GetUniqueId(), img_msg->GetStatus());
+	ui->chat_page->UpdateImgChatStatus(img_msg);
 }
 
 void ChatDialog::slot_reset_icon(QString path) {
@@ -1107,3 +1110,22 @@ void ChatDialog::slot_jump_chat_item_from_infopage(std::shared_ptr<UserInfo> use
 	emit TcpMgr::GetInstance()->sig_send_data(ReqId::ID_CREATE_PRIVATE_CHAT_REQ, jsonData);
 }
 
+
+void ChatDialog::slot_update_upload_progress(std::shared_ptr<MsgInfo> msg_info) {
+	auto chat_data = UserMgr::GetInstance()->GetChatThreadByThreadId(msg_info->_thread_id);
+	if (chat_data == nullptr) {
+		return;
+	}
+	
+	//更新消息，其实不用更新，都是共享msg_info的一块内存，这里为了安全还是再次更新下
+
+	chat_data->UpdateProgress(msg_info);
+
+	if (_cur_chat_thread_id != msg_info->_thread_id) {
+		return;
+	}
+	
+
+	//更新聊天界面信息
+	ui->chat_page->UpdateFileProgress(msg_info);
+}

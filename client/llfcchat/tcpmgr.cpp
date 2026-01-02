@@ -19,9 +19,6 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
            // 读取所有数据并追加到缓冲区
            _buffer.append(_socket.readAll());
 
-           QDataStream stream(&_buffer, QIODevice::ReadOnly);
-           stream.setVersion(QDataStream::Qt_5_0);
-
            forever {
                 //先解析头部
                if(!_b_recv_pending){
@@ -30,13 +27,11 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
                        return; // 数据不够，等待更多数据
                    }
 
-                   // 预读取消息ID和消息长度，但不从缓冲区中移除
+                   // ✅ 每次都重新创建stream
+                   QDataStream stream(_buffer);
+                   stream.setVersion(QDataStream::Qt_5_0);
                    stream >> _message_id >> _message_len;
-
-                   //将buffer 中的前四个字节移除
-                   _buffer = _buffer.mid(sizeof(quint16) * 2);
-
-                   // 输出读取的数据
+                   _buffer.remove(0, sizeof(quint16) * 2);  // 使用remove代替mid赋值
                    qDebug() << "Message ID:" << _message_id << ", Length:" << _message_len;
 
                }
@@ -789,9 +784,23 @@ void TcpMgr::initHandlers()
         auto text_or_url = jsonObj["text_or_url"].toString();
 
         auto file_info = UserMgr::GetInstance()->GetTransFileByName(unique_name);
+        //如果未找到文件对应的信息则返回
+        if (!file_info) {
+            return;
+        }
+        //设置消息id和会话id
+        file_info->_msg_id = msg_id;
+        file_info->_thread_id = thread_id;
+        //设置文件传输的类型
+        file_info->_transfer_type = TransferType::Upload;
+        //设置文件传输状态
+        file_info->_transfer_state = TransferState::Uploading;
  
         auto chat_data = std::make_shared<ImgChatData>(file_info, unique_id, thread_id, ChatFormType::PRIVATE,
             ChatMsgType::TEXT, sender, status, chat_time);
+
+        //更新msg_id,因为最开始构造的chat_dat中ImgChatData的msg_id为空
+        chat_data->SetMsgId(msg_id);
 
         //发送信号通知界面
         emit sig_chat_img_rsp(thread_id, chat_data);

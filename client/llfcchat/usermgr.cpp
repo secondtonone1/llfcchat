@@ -417,6 +417,7 @@ std::shared_ptr<DownloadInfo> UserMgr::GetDownloadInfo(QString name)
     return iter.value();
 }
 
+
 void UserMgr::AddLabelToReset(QString path, QLabel* label)
 {
     auto iter = _path_to_reset_labels.find(path);
@@ -478,11 +479,82 @@ void UserMgr::RmvTransFileByName(QString name) {
     _name_to_msg_info.erase(iter);
 }
 
-std::shared_ptr<MsgInfo> UserMgr::GetFreeTransFile() {
+void UserMgr::PauseTransFileByName(QString name) {
     std::lock_guard<std::mutex> mtx(_trans_mtx);
-    if (_name_to_download_info.isEmpty()) {
+    auto iter = _name_to_msg_info.find(name);
+    if (iter == _name_to_msg_info.end()) {
+        return;
+    }
+
+    iter.value()->_transfer_state = TransferState::Paused;
+}
+
+void UserMgr::ResumeTransFileByName(QString name)
+{
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    auto iter = _name_to_msg_info.find(name);
+    if (iter == _name_to_msg_info.end()) {
+        return;
+    }
+        
+    if (iter.value()->_transfer_type == TransferType::Download) {
+        iter.value()->_transfer_state = TransferState::Downloading;
+        return;
+    }
+
+    if (iter.value()->_transfer_type == TransferType::Upload) {
+        iter.value()->_transfer_state = TransferState::Uploading;
+        return;
+    }
+}
+
+bool UserMgr::TransFileIsUploading(QString name) {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    auto iter = _name_to_msg_info.find(name);
+    if (iter == _name_to_msg_info.end()) {
+        return false;
+    }
+
+    if (iter.value()->_transfer_state == TransferState::Uploading) {
+        return true;
+    }
+
+    return false;
+}
+
+std::shared_ptr<MsgInfo> UserMgr::GetFreeUploadFile() {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    if (_name_to_msg_info.isEmpty()) {
         return nullptr;
     }
 
-    _name_to_msg_info.begin().value();
+    for (auto iter = _name_to_msg_info.begin(); iter != _name_to_msg_info.end(); iter++) {
+        //只要传输状态不是暂停则返回一个可用的待传输文件
+        if ((iter.value()->_transfer_state != TransferState::Paused) && 
+            (iter.value()->_transfer_type == TransferType::Upload)) {
+            return iter.value();
+        }
+    }
+
+    //没有找到等待传输的文件则返回空
+    return nullptr;
 }
+
+std::shared_ptr<MsgInfo> UserMgr::GetFreeDownloadFile() {
+    std::lock_guard<std::mutex> mtx(_trans_mtx);
+    if (_name_to_msg_info.isEmpty()) {
+        return nullptr;
+    }
+
+    for (auto iter = _name_to_msg_info.begin(); iter != _name_to_msg_info.end(); iter++) {
+        //只要传输状态不是暂停则返回一个可用的待传输文件
+        if ((iter.value()->_transfer_state != TransferState::Paused) &&
+            (iter.value()->_transfer_type == TransferType::Download)) {
+            return iter.value();
+        }
+    }
+
+    //没有找到等待传输的文件则返回空
+    return nullptr;
+}
+

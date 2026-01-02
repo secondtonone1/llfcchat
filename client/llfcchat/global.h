@@ -78,7 +78,9 @@ enum ReqId{
 
     ID_NOTIFY_IMG_CHAT_MSG_REQ = 1039,   //通知用户图片聊天信息
     ID_FILE_INFO_SYNC_REQ     =  1041,    //文件信息同步请求
-    ID_FILE_INFO_SYNC_RSP     =  1042     //文件信息同步回复
+    ID_FILE_INFO_SYNC_RSP     =  1042,     //文件信息同步回复
+    ID_IMG_CHAT_CONTINUE_UPLOAD_REQ = 1043,  //续传聊天图片资源请求
+    ID_IMG_CHAT_CONTINUE_UPLOAD_RSP = 1044,  //续传聊天图片资源回复
 };
 Q_DECLARE_METATYPE(ReqId)
 
@@ -143,12 +145,27 @@ enum class MsgType {
     FILE_MSG = 3//文件消息,
 };
 
+enum class TransferType {
+    None,
+    Download,  //下载
+    Upload     //上传
+};
+
+enum class TransferState {
+    None,           // 无传输
+    Downloading,    // 下载中
+    Uploading,      // 上传中
+    Paused,         // 暂停
+    Completed,      // 完成
+    Failed          // 失败
+};
 
 struct MsgInfo{
-
+    MsgInfo() = default;
     MsgInfo(MsgType msgtype, QString text_or_url, QPixmap pixmap, QString unique_name, qint64 total_size, QString md5)
-    :_msg_type(msgtype), _text_or_url(text_or_url), _preview_pix(pixmap),_unique_name(unique_name),_total_size(total_size)
-        ,_seq(1),_md5(md5), _last_confirmed_seq(0)
+    :_msg_type(msgtype), _text_or_url(text_or_url), _preview_pix(pixmap),_unique_name(unique_name),_total_size(total_size),
+        _current_size(0),_seq(1),_md5(md5), _last_confirmed_seq(0),_rsp_size(0), _transfer_state(TransferState::None),
+        _transfer_type(TransferType::None)
     {
         _max_seq = (total_size + MAX_FILE_LEN - 1) / MAX_FILE_LEN;
     }
@@ -165,7 +182,16 @@ struct MsgInfo{
     std::set<qint64> _flighting_seqs;  //正在发送，但是未收到服务器回复，将来用来做超时重传
     qint64 _last_confirmed_seq;      //最后确认序列
     qint64 _max_seq;                //最大序列号
+    qint64 _msg_id;                 //关联的消息id
+    qint64 _rsp_size;  //服务器返回实际上传或者下载的大小
+    qint64 _thread_id;             // 会话id
+    TransferState _transfer_state;  //上传或者下载, 暂停，传输完成
+    TransferType  _transfer_type;   //文件类型, 上传或者下载
+    
 };
+//声明为元对象类型
+Q_DECLARE_METATYPE(MsgInfo)
+Q_DECLARE_METATYPE(std::shared_ptr<MsgInfo>)
 
 //聊天界面几种模式
 enum ChatUIMode{
@@ -241,6 +267,8 @@ enum class ChatMsgType {
     PIC = 1,
     FILE = 2
 };
+
+
 
 extern QString generateUniqueFileName(const QString& originalName);
 

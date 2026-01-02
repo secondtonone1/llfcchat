@@ -161,6 +161,7 @@ public:
     int GetStatus() { return _status; }
     void SetMsgId(int msg_id) { _msg_id = msg_id; }
     void SetStatus(int status) { _status = status; }
+    virtual ~ChatDataBase() {}  // 添加虚析构函数
 private:
     //客户端本地唯一标识
     QString _unique_id;
@@ -206,6 +207,8 @@ public:
     }
 
     TextChatData() = default;
+
+    ~TextChatData() override{}
 };
 
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<TextChatData>>)
@@ -219,6 +222,8 @@ public:
             send_uid, status, chat_time), _msg_info(msg_info){
 
     }
+   
+    ~ImgChatData() override {}
 
     std::shared_ptr<MsgInfo> _msg_info;
 };
@@ -244,6 +249,7 @@ public:
         _other_id(other_id), _thread_id(thread_id), _last_msg_id(last_msg_id){}
     void AddMsg(std::shared_ptr<ChatDataBase> msg);
     void MoveMsg(std::shared_ptr<ChatDataBase> msg);
+    void UpdateProgress(std::shared_ptr<MsgInfo> msg);
     void SetLastMsgId(int msg_id);
     void SetOtherId(int other_id);
     int  GetOtherId();
@@ -256,6 +262,7 @@ public:
     int GetLastMsgId();
     QMap<QString, std::shared_ptr<ChatDataBase>>& GetMsgUnRspRef();
     void AppendUnRspMsg(QString unique_id, std::shared_ptr<ChatDataBase> base_msg);
+    std::shared_ptr<ChatDataBase> GetChatDataBase(int msg_id);
 private:
     //如果是私聊，则为对方的id；如果是群聊，则为0
     int _other_id;

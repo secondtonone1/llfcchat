@@ -16,9 +16,6 @@ _bytes_sent(0), _pending(false), _cwnd_size(0)
         // 读取所有数据并追加到缓冲区
         _buffer.append(_socket.readAll());
 
-        QDataStream stream(&_buffer, QIODevice::ReadOnly);
-        stream.setVersion(QDataStream::Qt_5_0);
-
         forever {
              //先解析头部
             if(!_b_recv_pending){
@@ -27,13 +24,13 @@ _bytes_sent(0), _pending(false), _cwnd_size(0)
                     return; // 数据不够，等待更多数据
                 }
 
-                // 预读取消息ID和消息长度，但不从缓冲区中移除
+                // ✅ 每次都重新创建stream
+                QDataStream stream(_buffer);
+                stream.setVersion(QDataStream::Qt_5_0);
                 stream >> _message_id >> _message_len;
 
-                //将buffer 中的前六个字节移除
-                _buffer = _buffer.mid(FILE_UPLOAD_HEAD_LEN);
+                _buffer.remove(0, FILE_UPLOAD_HEAD_LEN);  // 使用remove代替mid赋值
 
-                // 输出读取的数据
                 qDebug() << "Message ID:" << _message_id << ", Length:" << _message_len;
 
             }
@@ -134,6 +131,9 @@ _bytes_sent(0), _pending(false), _cwnd_size(0)
 
      //连接
      QObject::connect(this, &FileTcpMgr::sig_close, this, &FileTcpMgr::slot_tcp_close);
+
+     //链接续传信号
+     QObject::connect(this, &FileTcpMgr::sig_continue_upload_file, this, &FileTcpMgr::slot_continue_upload_file);
      //注册消息
      initHandlers();
 
@@ -165,6 +165,8 @@ void FileTcpMgr::registerMetaType()
 
     qRegisterMetaType<std::shared_ptr<ChatThreadData>>("std::shared_ptr<ChatThreadData>");
     qRegisterMetaType<ReqId>("ReqId");
+    qRegisterMetaType<MsgInfo>("MsgInfo");
+    qRegisterMetaType<std::shared_ptr<MsgInfo>>("std::shared_ptr<MsgInfo>");
 }
 
 void FileTcpMgr::handleMsg(ReqId id, int len, QByteArray data)
@@ -471,13 +473,27 @@ void FileTcpMgr::initHandlers()
         qDebug() << "recv : " << name << "file seq is " << seq;
         //判断最大序列和最后确认序列号相等，说明收全了
         if (file_info->_last_confirmed_seq == file_info->_max_seq) {
+            //更新已经传输的文件大小
+            file_info->_rsp_size = file_info->_total_size;
+            //通知界面显示
+            emit sig_update_upload_progress(file_info);
             UserMgr::GetInstance()->RmvTransFileByName(name);
             //todo 此处添加发送其他待发送的文件
-            auto free_file = UserMgr::GetInstance()->GetFreeTransFile();
+            auto free_file = UserMgr::GetInstance()->GetFreeUploadFile();
+            if (free_file == nullptr) {
+                return;
+            }
             BatchSend(free_file);
             return;
         }
-
+        //更新已经传输的文件大小
+        file_info->_rsp_size = (file_info->_last_confirmed_seq) * MAX_FILE_LEN;
+        //通知界面显示
+        emit sig_update_upload_progress(file_info);
+        //如果传输状态不为上传，则直接返回。
+        if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
+            return;
+        }
         BatchSend(file_info);
     });
 
@@ -528,21 +544,122 @@ void FileTcpMgr::initHandlers()
             ++file_info->_last_confirmed_seq;
         }
 
+     
+
         qDebug() << "recv : " << name << "file seq is " << seq;
         //判断最大序列和最后确认序列号相等，说明收全了
         if (file_info->_last_confirmed_seq == file_info->_max_seq) {
+            //更新已经传输的文件大小
+            file_info->_rsp_size = file_info->_total_size;
+            //通知界面显示
+            emit sig_update_upload_progress(file_info);
             UserMgr::GetInstance()->RmvTransFileByName(name);
             //todo 此处添加发送其他待发送的文件
-            auto free_file = UserMgr::GetInstance()->GetFreeTransFile();
+            auto free_file = UserMgr::GetInstance()->GetFreeUploadFile();
+            if (free_file == nullptr) {
+                return;
+            }
             BatchSend(free_file);
             return;
         }
 
+        //更新已经传输的文件大小
+        file_info->_rsp_size = (file_info->_last_confirmed_seq) * MAX_FILE_LEN;
+
+        //发送信号，更新图片上传进度
+        emit sig_update_upload_progress(file_info);
+        //如果传输状态不为上传，则直接返回。
+        if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
+            return;
+        }
+        BatchSend(file_info); });
+
+        _handlers.insert(ID_IMG_CHAT_CONTINUE_UPLOAD_RSP, [this](ReqId id, int len, QByteArray data) {
+        Q_UNUSED(len);
+        qDebug() << "handle id is " << id;
+        // 将QByteArray转换为QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+        _cwnd_size--;
+        // 检查转换是否成功
+        if (jsonDoc.isNull()) {
+            qDebug() << "Failed to create QJsonDocument.";
+            return;
+        }
+
+        QJsonObject recvObj = jsonDoc.object();
+        qDebug() << "data jsonobj is " << recvObj;
+
+        if (!recvObj.contains("error")) {
+            int err = ErrorCodes::ERR_JSON;
+            qDebug() << "icon upload_failed, err is Json Parse Err" << err;
+            //todo ... 提示上传失败
+            //emit upload_failed();
+            return;
+        }
+
+        int err = recvObj["error"].toInt();
+        if (err != ErrorCodes::SUCCESS) {
+            qDebug() << "Login Failed, err is " << err;
+            //emit upload_failed();
+            return;
+        }
+
+        auto name = recvObj["name"].toString();
+        auto file_info = UserMgr::GetInstance()->GetTransFileByName(name);
+        if (!file_info) {
+            return;
+        }
+
+        auto md5 = file_info->_md5;
+        auto seq = recvObj["seq"].toInt();
+        //根据seq从未接收集合移动到已接收集合中
+        file_info->_flighting_seqs.erase(seq);
+        //将seq放入已收到集合中
+        file_info->_rsp_seqs.insert(seq);
+        //计算当前最后确认的序列号
+        while (file_info->_rsp_seqs.count(file_info->_last_confirmed_seq + 1)) {
+            ++file_info->_last_confirmed_seq;
+        }
+
+
+
+        qDebug() << "recv : " << name << "file seq is " << seq;
+        //判断最大序列和最后确认序列号相等，说明收全了
+        if (file_info->_last_confirmed_seq == file_info->_max_seq) {
+            //更新已经传输的文件大小
+            file_info->_rsp_size = file_info->_total_size;
+            //通知界面显示
+            emit sig_update_upload_progress(file_info);
+            UserMgr::GetInstance()->RmvTransFileByName(name);
+            //todo 此处添加发送其他待发送的文件
+            auto free_file = UserMgr::GetInstance()->GetFreeUploadFile();
+            if (free_file == nullptr) {
+                return;
+            }
+            BatchSend(free_file);
+            return;
+        }
+
+        //更新已经传输的文件大小
+        file_info->_rsp_size = (file_info->_last_confirmed_seq) * MAX_FILE_LEN;
+
+        //发送信号，更新图片上传进度
+        emit sig_update_upload_progress(file_info);
+        //如果传输状态不为上传，则直接返回。
+        if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
+            return;
+        }
         BatchSend(file_info); });
 }
 
+void FileTcpMgr::ContinueUploadFile(QString unique_name) {
+    emit sig_continue_upload_file(unique_name);
+}
 
 void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info) {
+    if (msg_info == nullptr) {
+        return;
+    }
 
     if ((msg_info->_seq) * MAX_FILE_LEN >= msg_info->_total_size) {
         qDebug() << "file has sent finished";
@@ -579,7 +696,8 @@ void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info) {
         sendObj["md5"] = msg_info->_md5;
         sendObj["name"] = msg_info->_unique_name;
         sendObj["seq"] = msg_info->_seq;
-        sendObj["trans_size"] = buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN;
+        msg_info->_current_size = buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN;
+        sendObj["trans_size"] = msg_info->_current_size;
         sendObj["total_size"] = msg_info->_total_size;
 
         b_last = false;
@@ -610,6 +728,79 @@ void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info) {
 
 void FileTcpMgr::slot_tcp_close() {
     _socket.close();
+}
+
+void FileTcpMgr::slot_continue_upload_file(QString unique_name) {
+    auto msg_info = UserMgr::GetInstance()->GetTransFileByName(unique_name);
+    if (msg_info == nullptr) {
+        return;
+    }
+    //将待发送序列号更新为已经确认接收的序列号，然后基于此序列号再递增。
+    msg_info->_seq = msg_info->_last_confirmed_seq;
+
+    if ((msg_info->_seq) * MAX_FILE_LEN >= msg_info->_total_size) {
+        qDebug() << "file has sent finished";
+        return;
+    }
+
+    if (MAX_CWND_SIZE - _cwnd_size == 0) {
+        return;
+    }
+
+    //打开
+    QFile file(msg_info->_text_or_url);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Could not open file: " << file.errorString();
+        return;
+    }
+
+    //文件偏移到已经发送的位置，继续读取发送
+    file.seek(msg_info->_seq * MAX_FILE_LEN);
+
+    bool b_last = false;
+    //再次组织数据发送
+    for (; MAX_CWND_SIZE - _cwnd_size > 0; ) {
+
+        QByteArray buffer;
+        msg_info->_seq++;
+        //放入发送未回包集合
+        msg_info->_flighting_seqs.insert(msg_info->_seq);
+        //每次读取MAX_FILE_LEN字节发送
+        buffer = file.read(MAX_FILE_LEN);
+        QJsonObject sendObj;
+        //将文件内容转换为base64编码
+        QString base64Data = buffer.toBase64();
+        sendObj["md5"] = msg_info->_md5;
+        sendObj["name"] = msg_info->_unique_name;
+        sendObj["seq"] = msg_info->_seq;
+        msg_info->_current_size = buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN;
+        sendObj["trans_size"] = msg_info->_current_size;
+        sendObj["total_size"] = msg_info->_total_size;
+
+        b_last = false;
+        if (buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN >= msg_info->_total_size) {
+            sendObj["last"] = 1;
+            b_last = true;
+        }
+        else {
+            sendObj["last"] = 0;
+        }
+
+        sendObj["data"] = base64Data;
+        sendObj["last_seq"] = msg_info->_max_seq;
+        sendObj["uid"] = UserMgr::GetInstance()->GetUid();
+        QJsonDocument doc(sendObj);
+        auto send_data = doc.toJson();
+        //直接发送，其实是放入tcpmgr发送队列
+        SendData(ID_IMG_CHAT_CONTINUE_UPLOAD_REQ, send_data);
+        _cwnd_size++;
+        //如果
+        if (b_last) {
+            break;
+        }
+    }
+
+    file.close();
 }
 
 void FileTcpMgr::CloseConnection(){

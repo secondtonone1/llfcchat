@@ -67,7 +67,11 @@ public:
     void AddTransFile(QString name, std::shared_ptr<MsgInfo> msg_info);
     std::shared_ptr<MsgInfo> GetTransFileByName(QString name);
     void RmvTransFileByName(QString name);
-    std::shared_ptr<MsgInfo> GetFreeTransFile();
+    std::shared_ptr<MsgInfo> GetFreeUploadFile();
+    std::shared_ptr<MsgInfo> GetFreeDownloadFile();
+    void PauseTransFileByName(QString name);
+    void ResumeTransFileByName(QString name);
+    bool TransFileIsUploading(QString name);
 
 private:
     UserMgr();

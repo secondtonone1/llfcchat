@@ -19,7 +19,7 @@
 //TCP 长度字段的长度
 #define FILE_UPLOAD_LEN_LEN 4
 //最大文件长度
-#define MAX_FILE_LEN 1024*32
+#define MAX_FILE_LEN (1024*32)
 //定义最大拥塞窗口的大小
 #define MAX_CWND_SIZE 5
 
@@ -167,7 +167,7 @@ struct MsgInfo{
         _current_size(0),_seq(1),_md5(md5), _last_confirmed_seq(0),_rsp_size(0), _transfer_state(TransferState::None),
         _transfer_type(TransferType::None)
     {
-        _max_seq = (total_size + MAX_FILE_LEN - 1) / MAX_FILE_LEN;
+        _max_seq = ((total_size + MAX_FILE_LEN - 1) / MAX_FILE_LEN);
     }
 
     MsgType _msg_type;   //消息类型, 文本，图片，视频，文件

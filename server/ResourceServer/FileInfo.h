@@ -13,3 +13,13 @@ public:
 	int _trans_size;
 	std::string _file_path_str;
 };
+
+class ChatImgInfo {
+public:
+	ChatImgInfo(int sender_id,  int receiver_id, int message_id, std::string img_name)
+	:_sender_id(sender_id),_receiver_id(receiver_id),_message_id(message_id),_img_name(img_name){}
+	int _sender_id;
+	int _receiver_id;
+	int _message_id;
+	std::string _img_name;
+};

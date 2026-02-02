@@ -87,3 +87,18 @@ bool MysqlMgr::UpdateUserIcon(int uid, const std::string& icon) {
 	return _dao.UpdateHeadInfo(uid, icon);
 }
 
+bool MysqlMgr::UpdateUploadStatus(int chat_messag_id)
+{
+	return _dao.UpdateUploadStatus(chat_messag_id);
+}
+
+std::shared_ptr<ChatImgInfo> MysqlMgr::GetImgInfoByMsgId(int msg_id)
+{
+	//查询数据库获取图片信息
+	return _dao.GetImgInfoByMsgId(msg_id);
+}
+
+std::shared_ptr<ChatMessage> MysqlMgr::GetChatMsgById(int message_id)
+{
+	return _dao.GetChatMsgById(message_id);
+}

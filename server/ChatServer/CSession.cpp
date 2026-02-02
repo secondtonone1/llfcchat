@@ -8,6 +8,7 @@
 #include "LogicSystem.h"
 #include "RedisMgr.h"
 #include "ConfigMgr.h"
+#include "MysqlMgr.h"
 
 CSession::CSession(boost::asio::io_context& io_context, CServer* server):
 	_socket(io_context), _server(server), _b_close(false),_b_head_parse(false), _user_uid(0){
@@ -259,6 +260,22 @@ void CSession::NotifyOffline(int uid) {
 	std::string return_str = rtvalue.toStyledString();
 
 	Send(return_str, ID_NOTIFY_OFF_LINE_REQ);
+	return;
+}
+
+void CSession::NotifyChatImgRecv(const ::message::NotifyChatImgReq* request) {
+	Json::Value  rtvalue;
+	rtvalue["error"] = ErrorCodes::Success;
+	rtvalue["message_id"] = request->message_id();
+	rtvalue["sender_id"] = request->from_uid();
+	rtvalue["receiver_id"] = request->to_uid();
+	rtvalue["img_name"] = request->file_name();
+	rtvalue["total_size"] = int(request->total_size());
+	rtvalue["thread_id"] = request->thread_id();
+
+	std::string return_str = rtvalue.toStyledString();
+	//通知图片聊天信息
+	Send(return_str, ID_NOTIFY_IMG_CHAT_MSG_REQ);
 	return;
 }
 

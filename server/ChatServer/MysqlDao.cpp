@@ -1046,3 +1046,50 @@ bool MysqlDao::AddChatMsg(std::shared_ptr<ChatMessage> chat_data) {
 	}
 }
 
+std::shared_ptr<ChatMessage> MysqlDao::GetChatMsg(int message_id)
+{
+	auto con = pool_->getConnection();
+	if (!con) {
+		return nullptr;
+	}
+
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+
+	auto& conn = con->_con;
+
+	try {
+		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
+			conn->prepareStatement(
+				"SELECT message_id, thread_id, sender_id, recv_id, "
+				"content, created_at, updated_at, status "
+				"FROM chat_message WHERE message_id = ?"
+			)
+			);
+
+		pstmt->setUInt64(1, message_id);
+		auto rs = std::unique_ptr<sql::ResultSet>(pstmt->executeQuery());
+
+		if (rs->next()) {
+			auto msg = std::make_shared<ChatMessage>();
+			msg->message_id = rs->getUInt64("message_id");
+			msg->thread_id = rs->getUInt64("thread_id");
+			msg->sender_id = rs->getUInt64("sender_id");
+			msg->recv_id = rs->getUInt64("recv_id");
+			msg->content = rs->getString("content");
+			msg->chat_time = rs->getString("created_at");
+			msg->status = rs->getInt("status");
+
+			return msg;
+		}
+
+		return nullptr;
+
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "GetChatMessageById SQLException: " << e.what() << std::endl;
+		return nullptr;
+	}
+}
+

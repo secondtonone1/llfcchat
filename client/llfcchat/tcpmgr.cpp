@@ -4,6 +4,7 @@
 #include <QTimer>
 #include <QFile>
 #include <filetcpmgr.h>
+#include <QStandardPaths>
 
 TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_message_len(0),_bytes_sent(0),_pending(false)
 {
@@ -782,6 +783,7 @@ void TcpMgr::initHandlers()
         QString chat_time = jsonObj["chat_time"].toString();
         int status = jsonObj["status"].toInt();
         auto text_or_url = jsonObj["text_or_url"].toString();
+        auto receiver = jsonObj["touid"].toInt();
 
         auto file_info = UserMgr::GetInstance()->GetTransFileByName(unique_name);
         //如果未找到文件对应的信息则返回
@@ -791,6 +793,9 @@ void TcpMgr::initHandlers()
         //设置消息id和会话id
         file_info->_msg_id = msg_id;
         file_info->_thread_id = thread_id;
+        //设置发送者和接收者
+        file_info->_sender = sender;
+        file_info->_receiver = receiver;
         //设置文件传输的类型
         file_info->_transfer_type = TransferType::Upload;
         //设置文件传输状态
@@ -831,6 +836,9 @@ void TcpMgr::initHandlers()
         file_obj["md5"] = file_info->_md5;
         file_obj["uid"] = UserMgr::GetInstance()->GetUid();
         file_obj["data"] = base64Data;
+        file_obj["message_id"] = msg_id;
+        file_obj["receiver"] = receiver;
+        file_obj["sender"] = sender;
 
         if (buffer.size() + (file_info->_seq - 1) * MAX_FILE_LEN >= file_info->_total_size) {
             file_obj["last"] = 1;
@@ -847,6 +855,77 @@ void TcpMgr::initHandlers()
         FileTcpMgr::GetInstance()->SendData(ReqId::ID_FILE_INFO_SYNC_REQ, fileData);
 
         });
+
+    
+     _handlers.insert(ID_NOTIFY_IMG_CHAT_MSG_REQ, [this](ReqId id, int len, QByteArray data) {
+         Q_UNUSED(len);
+         qDebug() << "handle id is " << id << " data is " << data;
+         // 将QByteArray转换为QJsonDocument
+         QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+         // 检查转换是否成功
+         if (jsonDoc.isNull()) {
+             qDebug() << "Failed to create QJsonDocument.";
+             return;
+         }
+
+         QJsonObject jsonObj = jsonDoc.object();
+         qDebug() << "receive notify img chat msg req success" ;
+
+
+         //收到消息后转发给页面
+         auto thread_id = jsonObj["thread_id"].toInt();
+         auto sender_id = jsonObj["sender_id"].toInt();
+         auto message_id = jsonObj["message_id"].toInt();
+         auto receiver_id = jsonObj["receiver_id"].toInt();
+         auto img_name = jsonObj["img_name"].toString();
+         auto total_size = jsonObj["total_size"].toInt();
+         //客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+         QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+         QString img_path_str = storageDir + "/chatimg/" + QString::number(sender_id);
+         auto file_info = UserMgr::GetInstance()->GetTransFileByName(img_name);
+         //正常情况是找不到的，所以这里初始化一个文件信息放入UserMgr中管理
+         if (!file_info) {
+             //预览图先默认空白，md5为空
+             file_info = std::make_shared<MsgInfo>(MsgType::IMG_MSG, img_path_str, CreateLoadingPlaceholder(200, 200), img_name, total_size, "");
+             UserMgr::GetInstance()->AddTransFile(img_name, file_info);
+         }
+
+         file_info->_transfer_type = TransferType::Download;
+         file_info->_msg_id = message_id;
+         file_info->_sender = sender_id;
+         file_info->_receiver = receiver_id;
+
+
+
+         auto img_chat_data_ptr = std::make_shared<ImgChatData>(file_info, "",
+             thread_id, ChatFormType::PRIVATE, ChatMsgType::PIC,
+             sender_id, MsgStatus::READED);
+
+
+         emit sig_img_chat_msg(img_chat_data_ptr);
+
+         //组织请求，准备下载
+         QJsonObject jsonObj_send;
+         jsonObj_send["name"] = img_name;
+         jsonObj_send["seq"] = file_info->_seq;
+         jsonObj_send["trans_size"] = 0;
+         jsonObj_send["total_size"] = file_info->_total_size;
+         jsonObj_send["token"] = UserMgr::GetInstance()->GetToken();
+         jsonObj_send["sender_id"] = sender_id;
+         jsonObj_send["receiver_id"] = receiver_id;
+         jsonObj_send["message_id"] = message_id;
+         //客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+         QDir chatimgDir(img_path_str);
+         jsonObj["client_path"] = img_path_str;
+         if (!chatimgDir.exists()) {
+             chatimgDir.mkpath(".");  // 创建当前路径
+         }
+
+         QJsonDocument doc(jsonObj_send);
+         auto send_data = doc.toJson();
+         FileTcpMgr::GetInstance()->SendData(ID_IMG_CHAT_DOWN_REQ, send_data);
+     });
     
 }
 

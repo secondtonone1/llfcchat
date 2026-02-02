@@ -957,6 +957,7 @@ void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session,
 	//²åÈëÊý¾Ý¿â
 	MysqlMgr::GetInstance()->AddChatMsg(chat_msg);
 
+	rtvalue["message_id"] = chat_msg->message_id;
 	Defer defer([this, &rtvalue, session]() {
 		std::string return_str = rtvalue.toStyledString();
 		session->Send(return_str, ID_IMG_CHAT_MSG_RSP);

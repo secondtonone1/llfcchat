@@ -15,9 +15,11 @@ struct FileTask {
 	FileTask(std::shared_ptr<CSession> session,  MSG_IDS msg_id, int uid, std::string path, std::string name,
 		int seq, int total_size, int trans_size, int last, 
 		std::string file_data,
-		std::function<void(const Json::Value&)> callback) :_session(session), _msg_id(msg_id),_uid(uid),
+		std::function<void(const Json::Value&)> callback,int chat_msg_id=0,
+		int sender = 0, int receiver = 0) :_session(session), _msg_id(msg_id),_uid(uid),
 		_seq(seq), _path(path), _name(name), _total_size(total_size),
-		_trans_size(trans_size), _last(last), _file_data(file_data), _callback(callback)
+		_trans_size(trans_size), _last(last), _file_data(file_data), _callback(callback), _chat_msg_id(chat_msg_id),
+		_sender(sender), _receiver(receiver)
 	{}
 	~FileTask(){}
 	std::shared_ptr<CSession> _session;
@@ -31,6 +33,10 @@ struct FileTask {
 	int _last ;
 	std::string _file_data;
 	std::function<void(const Json::Value&)>  _callback;  //添加回调函数
+	int _chat_msg_id;
+	int _sender;
+	int _receiver;
+	int _thread_id;
 };
 
 

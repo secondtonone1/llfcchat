@@ -33,7 +33,7 @@ public:
     void SendData(ReqId reqId, QByteArray data);
     void CloseConnection();
     void SendDownloadInfo(std::shared_ptr<DownloadInfo> download);
-    void BatchSend(std::shared_ptr<MsgInfo> msg_info);
+    void BatchSend(std::shared_ptr<MsgInfo> msg_info, int sender, int receiver);
     void ContinueUploadFile(QString unique_name);
 private:
     void initHandlers();

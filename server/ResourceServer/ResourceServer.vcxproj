@@ -142,6 +142,7 @@
   <ItemGroup>
     <ClCompile Include="AsioIOServicePool.cpp" />
     <ClCompile Include="base64.cpp" />
+    <ClCompile Include="ChatServerGrpcClient.cpp" />
     <ClCompile Include="ConfigMgr.cpp" />
     <ClCompile Include="CServer.cpp" />
     <ClCompile Include="CSession.cpp" />
@@ -163,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="AsioIOServicePool.h" />
     <ClInclude Include="base64.h" />
+    <ClInclude Include="ChatServerGrpcClient.h" />
     <ClInclude Include="ConfigMgr.h" />
     <ClInclude Include="const.h" />
     <ClInclude Include="CServer.h" />

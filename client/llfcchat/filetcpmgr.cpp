@@ -1,5 +1,7 @@
 #include "filetcpmgr.h"
 #include "usermgr.h"
+#include <QPainter>
+#include <QStandardPaths>
 FileTcpMgr::FileTcpMgr(QObject* parent) : QObject(parent),
 _host(""), _port(0), _b_recv_pending(false), _message_id(0), _message_len(0),
 _bytes_sent(0), _pending(false), _cwnd_size(0)
@@ -455,6 +457,8 @@ void FileTcpMgr::initHandlers()
 		//为了简单起见，先处理网络正常情况  
 		auto seq = recvObj["seq"].toInt();
 		auto name = recvObj["name"].toString();
+		auto receiver = recvObj["receiver"].toInt();
+		auto sender = recvObj["sender"].toInt();
 
 		auto file_info = UserMgr::GetInstance()->GetTransFileByName(name);
 		if (!file_info) {
@@ -484,7 +488,7 @@ void FileTcpMgr::initHandlers()
 			if (free_file == nullptr) {
 				return;
 			}
-			BatchSend(free_file);
+			BatchSend(free_file,sender,receiver);
 			return;
 		}
 		//更新已经传输的文件大小
@@ -495,7 +499,7 @@ void FileTcpMgr::initHandlers()
 		if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
 			return;
 		}
-		BatchSend(file_info);
+		BatchSend(file_info, sender, receiver);
 		});
 
 	_handlers.insert(ID_IMG_CHAT_UPLOAD_RSP, [this](ReqId id, int len, QByteArray data) {
@@ -536,6 +540,10 @@ void FileTcpMgr::initHandlers()
 
 		auto md5 = file_info->_md5;
 		auto seq = recvObj["seq"].toInt();
+		
+		auto receiver = recvObj["receiver"].toInt();
+		auto sender = recvObj["sender"].toInt();
+
 		//根据seq从未接收集合移动到已接收集合中
 		file_info->_flighting_seqs.erase(seq);
 		//将seq放入已收到集合中
@@ -560,7 +568,7 @@ void FileTcpMgr::initHandlers()
 			if (free_file == nullptr) {
 				return;
 			}
-			BatchSend(free_file);
+			BatchSend(free_file,sender,receiver);
 			return;
 		}
 
@@ -573,7 +581,7 @@ void FileTcpMgr::initHandlers()
 		if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
 			return;
 		}
-		BatchSend(file_info); });
+		BatchSend(file_info,sender,receiver); });
 
 	_handlers.insert(ID_IMG_CHAT_CONTINUE_UPLOAD_RSP, [this](ReqId id, int len, QByteArray data) {
 		Q_UNUSED(len);
@@ -637,7 +645,7 @@ void FileTcpMgr::initHandlers()
 			if (free_file == nullptr) {
 				return;
 			}
-			BatchSend(free_file);
+			BatchSend(free_file, file_info->_sender, file_info->_receiver);
 			return;
 		}
 
@@ -650,14 +658,16 @@ void FileTcpMgr::initHandlers()
 		if (!UserMgr::GetInstance()->TransFileIsUploading(name)) {
 			return;
 		}
-		BatchSend(file_info); });
+		BatchSend(file_info, file_info->_sender, file_info->_receiver); });
+
 }
+
 
 void FileTcpMgr::ContinueUploadFile(QString unique_name) {
 	emit sig_continue_upload_file(unique_name);
 }
 
-void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info) {
+void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info, int sender, int receiver) {
 	if (msg_info == nullptr) {
 		return;
 	}
@@ -713,6 +723,9 @@ void FileTcpMgr::BatchSend(std::shared_ptr<MsgInfo> msg_info) {
 		sendObj["data"] = base64Data;
 		sendObj["last_seq"] = msg_info->_max_seq;
 		sendObj["uid"] = UserMgr::GetInstance()->GetUid();
+		sendObj["message_id"] = msg_info->_msg_id;
+		sendObj["sender"] = sender;
+		sendObj["receiver"] = receiver;
 		QJsonDocument doc(sendObj);
 		auto send_data = doc.toJson();
 		//直接发送，其实是放入tcpmgr发送队列
@@ -777,6 +790,9 @@ void FileTcpMgr::slot_continue_upload_file(QString unique_name) {
 		msg_info->_current_size = buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN;
 		sendObj["trans_size"] = msg_info->_current_size;
 		sendObj["total_size"] = msg_info->_total_size;
+		sendObj["sender"] = msg_info->_sender;
+		sendObj["receiver"] = msg_info->_receiver;
+		sendObj["message_id"] = msg_info->_msg_id;
 
 		b_last = false;
 		if (buffer.size() + (msg_info->_seq - 1) * MAX_FILE_LEN >= msg_info->_total_size) {

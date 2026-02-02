@@ -1,5 +1,6 @@
 #include "MysqlDao.h"
 #include "ConfigMgr.h"
+#include "const.h"
 
 MysqlDao::MysqlDao()
 {
@@ -959,3 +960,124 @@ bool MysqlDao::UpdateHeadInfo(int uid, const std::string& icon)
 	return false;
 }
 
+bool MysqlDao::UpdateUploadStatus(int chat_message_id)
+{
+	auto con = pool_->getConnection();
+	if (!con) {
+		return false;
+	}
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+
+	auto& conn = con->_con;
+	try {
+		std::string update_sql =
+			"UPDATE chat_message SET status = ? WHERE message_id = ?;";
+
+		std::unique_ptr<sql::PreparedStatement> pstmt(conn->prepareStatement(update_sql));
+		pstmt->setInt(1, MsgStatus::READED);
+		pstmt->setInt64(2, chat_message_id);
+
+		int affected_rows = pstmt->executeUpdate();
+
+		// 检查是否有行被更新（可选）
+		if (affected_rows == 0) {
+			std::cerr << "No chat message found with chat_message_id: " << chat_message_id << std::endl;
+			return false;
+		}
+
+		return true;
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "SQLException in UpdateUploadStatus: " << e.what() << std::endl;
+		return false;
+	}
+	return false;
+}
+
+std::shared_ptr<ChatImgInfo> MysqlDao::GetImgInfoByMsgId(int message_id) {
+	auto con = pool_->getConnection();
+	if (!con) {
+		return nullptr;
+	}
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+
+	auto& conn = con->_con;
+	try {
+		std::string update_sql =
+			"select message_id, sender_id, recv_id, content from  WHERE message_id = ?;";
+
+		// 准备查询语句
+		std::unique_ptr<sql::PreparedStatement> pstmt(con->_con->prepareStatement(update_sql));
+
+		// 绑定参数
+		pstmt->setInt(1, message_id);
+
+		// 执行查询
+		std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+		// 遍历结果集
+		while (res->next()) {
+			auto message_id = res->getInt64("message_id");
+			auto sender_id = res->getInt64("sender_id");
+			auto recv_id = res->getInt64("recv_id");
+			auto img_name = res->getString("content");
+			auto img_info = std::make_shared<ChatImgInfo>(sender_id, recv_id, message_id, img_name);
+			return img_info;
+		}
+		return nullptr;
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "SQLException in UpdateUploadStatus: " << e.what() << std::endl;
+		return nullptr;
+	}
+	return nullptr;
+}
+
+std::shared_ptr<ChatMessage> MysqlDao::GetChatMsgById(int message_id) {
+	auto con = pool_->getConnection();
+	if (!con) {
+		return nullptr;
+	}
+
+	Defer defer([this, &con]() {
+		pool_->returnConnection(std::move(con));
+		});
+
+	auto& conn = con->_con;
+
+	try {
+		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
+			conn->prepareStatement(
+				"SELECT message_id, thread_id, sender_id, recv_id, "
+				"content, created_at, updated_at, status "
+				"FROM chat_message WHERE message_id = ?"
+			)
+			);
+
+		pstmt->setUInt64(1, message_id);
+		auto rs = std::unique_ptr<sql::ResultSet>(pstmt->executeQuery());
+
+		if (rs->next()) {
+			auto msg = std::make_shared<ChatMessage>();
+			msg->message_id = rs->getUInt64("message_id");
+			msg->thread_id = rs->getUInt64("thread_id");
+			msg->sender_id = rs->getUInt64("sender_id");
+			msg->recv_id = rs->getUInt64("recv_id");
+			msg->content = rs->getString("content");
+			msg->chat_time = rs->getString("created_at");
+			msg->status = rs->getInt("status");
+
+			return msg;
+		}
+
+		return nullptr;
+
+	}
+	catch (sql::SQLException& e) {
+		std::cerr << "GetChatMessageById SQLException: " << e.what() << std::endl;
+		return nullptr;
+	}
+}

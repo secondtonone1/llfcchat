@@ -151,7 +151,7 @@ void MessageTextEdit::insertImages(const QString &url)
     QString origin_name = fileInfo.fileName();
     QString unique_name = generateUniqueFileName(origin_name);
     insertMsgList(_img_or_file_list, MsgType::IMG_MSG, url, QPixmap::fromImage(image), unique_name,
-        total_size, fileMd5);
+        total_size, fileMd5); 
 }
 
 void MessageTextEdit::insertFiles(const QString& url) {

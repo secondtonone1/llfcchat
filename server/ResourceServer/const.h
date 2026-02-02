@@ -24,8 +24,15 @@ enum ErrorCodes {
 	FileOffsetInvalid = 1018,   //文件偏移量有误
 	FileReadFailed = 1019,      //文件读取失败
 	RedisReadErr = 1020,        //redis读取失败
+	ServerIpErr = 1021          //server ip错误
 };
 
+enum MsgStatus {
+	UN_READ = 0,  //对方未读
+	SEND_FAILED = 1,  //发送失败
+	READED = 2,  //对方已读
+	UN_UPLOAD = 3 //未上传完成
+};
 
 // Defer类
 class Defer {
@@ -79,7 +86,9 @@ enum MSG_IDS {
 	ID_FILE_INFO_SYNC_REQ = 1041,      //文件信息同步请求
 	ID_FILE_INFO_SYNC_RSP = 1042,       //文件信息同步回复
 	ID_IMG_CHAT_CONTINUE_UPLOAD_REQ = 1043,  //续传聊天图片资源请求
-	ID_IMG_CHAT_CONTINUE_UPLOAD_RSP = 1044  //续传聊天图片资源回复
+	ID_IMG_CHAT_CONTINUE_UPLOAD_RSP = 1044,  //续传聊天图片资源回复
+	ID_IMG_CHAT_DOWN_SYNC_REQ = 1045,   //获取聊天图片下载的同步信息
+	ID_IMG_CHAT_DOWN_SYNC_RSP = 1046    //获取聊天图片下载的同步信息回包
 };
 
 #define USERIPPREFIX  "uip_"

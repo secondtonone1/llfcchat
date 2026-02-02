@@ -72,6 +72,9 @@
     <ClCompile Include="RedisMgr.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ChatServerGrpcClient.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AsioIOServicePool.h">
@@ -132,6 +135,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="message.grpc.pb.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatServerGrpcClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

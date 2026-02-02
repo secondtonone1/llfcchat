@@ -4,6 +4,7 @@
 #include "Singleton.h"
 #include <vector>
 #include "message.pb.h"
+#include "FileInfo.h"
 
 class MysqlMgr: public Singleton<MysqlMgr>
 {
@@ -32,6 +33,9 @@ public:
 	std::shared_ptr<PageResult> LoadChatMsg(int threadId, int lastId, int pageSize);
 	bool AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas);
 	bool UpdateUserIcon(int uid, const std::string& icon);
+	bool UpdateUploadStatus(int chat_messag_id);
+	std::shared_ptr<ChatImgInfo> GetImgInfoByMsgId(int msg_id);
+	std::shared_ptr<ChatMessage> GetChatMsgById(int message_id);
 private:
 	MysqlMgr();
 	MysqlDao  _dao;

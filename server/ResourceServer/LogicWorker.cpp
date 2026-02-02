@@ -7,6 +7,7 @@
 #include "LogicSystem.h"
 #include "ConfigMgr.h"
 #include "RedisMgr.h"
+#include "MysqlMgr.h"
 
 LogicWorker::LogicWorker():_b_stop(false)
 {
@@ -383,6 +384,9 @@ void LogicWorker::RegisterCallBacks()
 			auto file_data = root["data"].asString();
 			auto file_path = ConfigMgr::Inst().GetFileOutPath();
 			auto uid = root["uid"].asInt();
+			auto sender = root["sender"].asInt();
+			auto receiver = root["receiver"].asInt();
+			auto message_id = root["message_id"].asInt();
 			//转化为字符串
 			auto uid_str = std::to_string(uid);
 			auto file_path_str = (file_path / uid_str / name).string();
@@ -400,6 +404,8 @@ void LogicWorker::RegisterCallBacks()
 				rtvalue["last"] = last;
 				rtvalue["md5"] = md5;
 				rtvalue["uid"] = uid;
+				rtvalue["sender"] = sender;
+				rtvalue["receiver"] = receiver;
 				std::string return_str = rtvalue.toStyledString();
 				session->Send(return_str, ID_IMG_CHAT_UPLOAD_RSP);
 			};
@@ -449,7 +455,7 @@ void LogicWorker::RegisterCallBacks()
 
 			FileSystem::GetInstance()->PostMsgToQue(
 				std::make_shared<FileTask>(session, ID_IMG_CHAT_UPLOAD_REQ, uid, file_path_str, name, seq, total_size,
-					trans_size, last, file_data, callback),
+					trans_size, last, file_data, callback, message_id,sender,receiver),
 				index
 			);
 	};	
@@ -469,6 +475,9 @@ void LogicWorker::RegisterCallBacks()
 			auto file_data = root["data"].asString();
 			auto file_path = ConfigMgr::Inst().GetFileOutPath();
 			auto uid = root["uid"].asInt();
+			auto message_id = root["message_id"].asInt();
+			auto sender = root["sender"].asInt();
+			auto receiver = root["receiver"].asInt();
 			//转化为字符串
 			auto uid_str = std::to_string(uid);
 			auto file_path_str = (file_path / uid_str / name).string();
@@ -486,6 +495,8 @@ void LogicWorker::RegisterCallBacks()
 				rtvalue["last"] = last;
 				rtvalue["md5"] = md5;
 				rtvalue["uid"] = uid;
+				rtvalue["sender"] = sender;
+				rtvalue["receiver"] = receiver;
 				std::string return_str = rtvalue.toStyledString();
 				session->Send(return_str, ID_FILE_INFO_SYNC_RSP);
 			};
@@ -535,7 +546,7 @@ void LogicWorker::RegisterCallBacks()
 
 			FileSystem::GetInstance()->PostMsgToQue(
 				std::make_shared<FileTask>(session, ID_FILE_INFO_SYNC_REQ, uid, file_path_str, name, seq, total_size,
-					trans_size, last, file_data, callback),
+					trans_size, last, file_data, callback, message_id,sender,receiver),
 				index
 			);
 	};
@@ -556,6 +567,9 @@ void LogicWorker::RegisterCallBacks()
 			auto file_data = root["data"].asString();
 			auto file_path = ConfigMgr::Inst().GetFileOutPath();
 			auto uid = root["uid"].asInt();
+			auto message_id = root["message_id"].asInt();
+			auto sender = root["sender"].asInt();
+			auto receiver = root["receiver"].asInt();
 			//转化为字符串
 			auto uid_str = std::to_string(uid);
 			auto file_path_str = (file_path / uid_str / name).string();
@@ -573,6 +587,8 @@ void LogicWorker::RegisterCallBacks()
 				rtvalue["last"] = last;
 				rtvalue["md5"] = md5;
 				rtvalue["uid"] = uid;
+				rtvalue["sender"] = sender;
+				rtvalue["receiver"] = receiver;
 				std::string return_str = rtvalue.toStyledString();
 				session->Send(return_str, ID_IMG_CHAT_CONTINUE_UPLOAD_RSP);
 			};
@@ -622,9 +638,43 @@ void LogicWorker::RegisterCallBacks()
 
 			FileSystem::GetInstance()->PostMsgToQue(
 				std::make_shared<FileTask>(session, ID_IMG_CHAT_CONTINUE_UPLOAD_REQ, uid, file_path_str, name, seq, total_size,
-					trans_size, last, file_data, callback),
+					trans_size, last, file_data, callback, message_id,sender,receiver),
 				index
 			);
+	};
+
+	_fun_callbacks[ID_IMG_CHAT_DOWN_SYNC_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_id,
+		const string& msg_data) {
+			//查询mysql，返回消息的发送方，接收方，以及图片的连接，名字，大小等
+			std::shared_ptr<ChatImgInfo> down_load_info = MysqlMgr::GetInstance()->GetImgInfoByMsgId(msg_id);
+			// 资源文件路径
+			auto file_dir = ConfigMgr::Inst().GetFileOutPath();
+			//该消息是接收方客户端发送过来的,服务器将资源存储在发送方的文件夹中
+			auto uid_str = std::to_string(down_load_info->_sender_id);
+			auto file_path = (file_dir / uid_str / down_load_info->_img_name);
+			boost::uintmax_t file_size = boost::filesystem::file_size(file_path);
+
+			//写入redis
+			auto file_info = std::make_shared<FileInfo>();
+			file_info->_file_path_str = file_path.string();
+			file_info->_name = down_load_info->_img_name;
+			file_info->_seq = 0;
+
+			file_info->_total_size = file_size;
+			file_info->_trans_size = 0;
+			// 立即保存到 Redis，覆盖旧数据，设置过期时间
+			RedisMgr::GetInstance()->SetDownLoadInfo(file_info->_name, file_info);
+
+			// 在异步任务完成后调用
+			Json::Value rtvalue;
+			rtvalue["error"] = ErrorCodes::Success;
+			rtvalue["total_size"] = (double)(file_size);
+			rtvalue["message_id"] = msg_id;
+			rtvalue["sender"] = down_load_info->_sender_id;
+			rtvalue["receiver"] = down_load_info->_receiver_id;
+			rtvalue["img_name"] = down_load_info->_img_name;
+			std::string return_str = rtvalue.toStyledString();
+			session->Send(return_str, ID_IMG_CHAT_DOWN_SYNC_RSP);
 	};
 }
 

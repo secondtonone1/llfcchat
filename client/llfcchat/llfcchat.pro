@@ -29,6 +29,7 @@ SOURCES += \
         BubbleFrame.cpp \
         ChatItemBase.cpp \
         ChatView.cpp \
+        ClickableLabel.cpp \
         MessageTextEdit.cpp \
         PictureBubble.cpp \
         TextBubble.cpp \
@@ -80,6 +81,7 @@ HEADERS += \
         BubbleFrame.h \
         ChatItemBase.h \
         ChatView.h \
+        ClickableLabel.h \
         MessageTextEdit.h \
         PictureBubble.h \
         TextBubble.h \

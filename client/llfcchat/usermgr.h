@@ -24,6 +24,7 @@ public:
     QString GetNick();
     QString GetIcon();
     QString GetDesc();
+    void SetIcon(QString name);
      std::shared_ptr<UserInfo> GetUserInfo();
     void AppendApplyList(QJsonArray array);
     void AppendFriendList(QJsonArray array);

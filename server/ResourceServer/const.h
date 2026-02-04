@@ -88,7 +88,9 @@ enum MSG_IDS {
 	ID_IMG_CHAT_CONTINUE_UPLOAD_REQ = 1043,  //续传聊天图片资源请求
 	ID_IMG_CHAT_CONTINUE_UPLOAD_RSP = 1044,  //续传聊天图片资源回复
 	ID_IMG_CHAT_DOWN_SYNC_REQ = 1045,   //获取聊天图片下载的同步信息
-	ID_IMG_CHAT_DOWN_SYNC_RSP = 1046    //获取聊天图片下载的同步信息回包
+	ID_IMG_CHAT_DOWN_SYNC_RSP = 1046,    //获取聊天图片下载的同步信息回包
+	ID_IMG_CHAT_DOWN_REQ = 1047,    //聊天图片下载请求
+	ID_IMG_CHAT_DOWN_RSP = 1048     //聊天图片下载回复
 };
 
 #define USERIPPREFIX  "uip_"

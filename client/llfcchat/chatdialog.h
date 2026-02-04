@@ -30,7 +30,7 @@ protected:
     void handleGlobalMousePress(QMouseEvent *event) ;
     void CloseFindDlg();
     void UpdateChatMsg(std::vector<std::shared_ptr<TextChatData>> msgdata);
-    
+    void LoadHeadIcon(QString avatarPath, QLabel* icon_label, QString file_name, QString req_type);
 private:
     void showLoadingDlg(bool show = true);
     void AddLBGroup(StateWidget* lb); 
@@ -73,6 +73,7 @@ public slots:
     void slot_jump_chat_item_from_infopage(std::shared_ptr<UserInfo> ui);
     void slot_item_clicked(QListWidgetItem *item);
     void slot_text_chat_msg(std::vector<std::shared_ptr<TextChatData>> msglists);
+    void slot_img_chat_msg(std::shared_ptr<ImgChatData> imgchat);
     void slot_load_chat_thread(bool load_more, int last_thread_id,
         std::vector<std::shared_ptr<ChatThreadInfo>> chat_threads);
 
@@ -85,8 +86,10 @@ public slots:
     void slot_add_img_msg(int thread_id, std::shared_ptr<ImgChatData> img_msg);
     void slot_reset_icon(QString path);
     void slot_update_upload_progress(std::shared_ptr<MsgInfo> msg_info);
+    void slot_update_download_progress(std::shared_ptr<MsgInfo> msg_info);
+    void slot_download_finish(std::shared_ptr<MsgInfo> msg_info, QString file_path);
 private slots:
-
+    void slot_reset_head();
 };
 
 

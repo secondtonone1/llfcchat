@@ -21,6 +21,7 @@ public:
     void resumeState();
     void setMsgInfo(std::shared_ptr<MsgInfo> msg);
     TransferState state() const { return m_state; }
+    void setDownloadFinish(std::shared_ptr<MsgInfo> msg, QString file_path);
 
 signals:
     void pauseRequested(QString unique_name, TransferType transfer_type);   // 请求暂停

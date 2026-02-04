@@ -32,9 +32,10 @@ public:
     ~FileTcpMgr();
     void SendData(ReqId reqId, QByteArray data);
     void CloseConnection();
-    void SendDownloadInfo(std::shared_ptr<DownloadInfo> download);
+    void SendDownloadInfo(std::shared_ptr<DownloadInfo> download,QString req_type);
     void BatchSend(std::shared_ptr<MsgInfo> msg_info, int sender, int receiver);
     void ContinueUploadFile(QString unique_name);
+    void ContinueDownloadFile(QString unique_name);
 private:
     void initHandlers();
     explicit FileTcpMgr(QObject *parent = nullptr);
@@ -68,11 +69,15 @@ signals:
      void sig_reset_label_icon(QString path);
      void sig_update_upload_progress(std::shared_ptr<MsgInfo>);
      void sig_continue_upload_file(QString unique_name);
+     void sig_continue_download_file(QString unique_name);
+     void sig_update_download_progress(std::shared_ptr<MsgInfo>);
+     void sig_download_finish(std::shared_ptr<MsgInfo>,QString file_path);
 public slots:
     void slot_send_data(ReqId reqId, QByteArray data);
     void slot_tcp_connect(std::shared_ptr<ServerInfo> si);
     void slot_tcp_close();
     void slot_continue_upload_file(QString unique_name);
+    void slot_continue_download_file(QString unique_name);
 };
 
 #endif // FILETCPMGR_H

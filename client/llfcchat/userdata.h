@@ -162,7 +162,7 @@ public:
     void SetMsgId(int msg_id) { _msg_id = msg_id; }
     void SetStatus(int status) { _status = status; }
     virtual ~ChatDataBase() {}  // 添加虚析构函数
-private:
+protected:
     //客户端本地唯一标识
     QString _unique_id;
     //消息id
@@ -220,7 +220,7 @@ public:
         int send_uid, int status, QString chat_time = ""): 
         ChatDataBase(unique_id,thread_id, form_type, msg_type, msg_info->_text_or_url,
             send_uid, status, chat_time), _msg_info(msg_info){
-
+        _msg_id = _msg_info->_msg_id;
     }
    
     ~ImgChatData() override {}

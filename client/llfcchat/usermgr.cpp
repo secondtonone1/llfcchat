@@ -47,6 +47,11 @@ QString UserMgr::GetIcon()
     return _user_info->_icon;
 }
 
+void UserMgr::SetIcon(QString name) {
+    std::lock_guard<std::mutex> lock(_mtx);
+    _user_info->_icon = name;
+}
+
 QString UserMgr::GetDesc()
 {
     std::lock_guard<std::mutex> lock(_mtx);

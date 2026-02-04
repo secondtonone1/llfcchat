@@ -185,10 +185,10 @@ void LogicWorker::RegisterCallBacks()
 			}
 
 			rtvalue["error"] = ErrorCodes::Success;
-			rtvalue["total_size"] = file->_total_size;
+			rtvalue["total_size"] = std::to_string(file->_total_size);
 			rtvalue["seq"] = file->_seq;
 			rtvalue["name"] = file->_name;
-			rtvalue["trans_size"] = file->_trans_size;
+			rtvalue["trans_size"] = std::to_string(file->_trans_size);
 			rtvalue["md5"] = md5;
 
 	};
@@ -378,8 +378,10 @@ void LogicWorker::RegisterCallBacks()
 			auto md5 = root["md5"].asString();
 			auto seq = root["seq"].asInt();
 			auto name = root["name"].asString();
-			auto total_size = root["total_size"].asInt();
-			auto trans_size = root["trans_size"].asInt();
+			auto total_size_str = root["total_size"].asString();
+			auto trans_size_str = root["trans_size"].asString();
+			int64_t total_size = std::stoll(total_size_str);
+			int64_t trans_size = std::stoll(trans_size_str);
 			auto last = root["last"].asInt();
 			auto file_data = root["data"].asString();
 			auto file_path = ConfigMgr::Inst().GetFileOutPath();
@@ -397,10 +399,10 @@ void LogicWorker::RegisterCallBacks()
 				// 在异步任务完成后调用
 				Json::Value rtvalue = result;
 				rtvalue["error"] = ErrorCodes::Success;
-				rtvalue["total_size"] = total_size;
+				rtvalue["total_size"] = std::to_string(total_size);
 				rtvalue["seq"] = seq;
 				rtvalue["name"] = name;
-				rtvalue["trans_size"] = trans_size;
+				rtvalue["trans_size"] = std::to_string(trans_size);
 				rtvalue["last"] = last;
 				rtvalue["md5"] = md5;
 				rtvalue["uid"] = uid;
@@ -441,7 +443,7 @@ void LogicWorker::RegisterCallBacks()
 					session->Send(return_str, ID_IMG_CHAT_UPLOAD_RSP);
 					return;
 				}
-				file_info->_seq = seq;
+				file_info->_seq++;
 				file_info->_trans_size = trans_size;
 				bool success = RedisMgr::GetInstance()->SetFileInfo(name, file_info);
 				if (!success) {
@@ -469,8 +471,10 @@ void LogicWorker::RegisterCallBacks()
 			auto md5 = root["md5"].asString();
 			auto seq = root["seq"].asInt();
 			auto name = root["name"].asString();
-			auto total_size = root["total_size"].asInt();
-			auto trans_size = root["trans_size"].asInt();
+			auto total_size_str = root["total_size"].asString();
+			auto trans_size_str = root["trans_size"].asString();
+			auto total_size = std::stoll(total_size_str);
+			auto trans_size = std::stoll(trans_size_str);
 			auto last = root["last"].asInt();
 			auto file_data = root["data"].asString();
 			auto file_path = ConfigMgr::Inst().GetFileOutPath();
@@ -487,11 +491,9 @@ void LogicWorker::RegisterCallBacks()
 
 				// 在异步任务完成后调用
 				Json::Value rtvalue = result;
-				rtvalue["error"] = ErrorCodes::Success;
-				rtvalue["total_size"] = total_size;
+				rtvalue["error"] = ErrorCodes::Success;		
 				rtvalue["seq"] = seq;
 				rtvalue["name"] = name;
-				rtvalue["trans_size"] = trans_size;
 				rtvalue["last"] = last;
 				rtvalue["md5"] = md5;
 				rtvalue["uid"] = uid;
@@ -645,37 +647,81 @@ void LogicWorker::RegisterCallBacks()
 
 	_fun_callbacks[ID_IMG_CHAT_DOWN_SYNC_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_id,
 		const string& msg_data) {
-			//查询mysql，返回消息的发送方，接收方，以及图片的连接，名字，大小等
-			std::shared_ptr<ChatImgInfo> down_load_info = MysqlMgr::GetInstance()->GetImgInfoByMsgId(msg_id);
-			// 资源文件路径
-			auto file_dir = ConfigMgr::Inst().GetFileOutPath();
-			//该消息是接收方客户端发送过来的,服务器将资源存储在发送方的文件夹中
-			auto uid_str = std::to_string(down_load_info->_sender_id);
-			auto file_path = (file_dir / uid_str / down_load_info->_img_name);
-			boost::uintmax_t file_size = boost::filesystem::file_size(file_path);
-
-			//写入redis
-			auto file_info = std::make_shared<FileInfo>();
-			file_info->_file_path_str = file_path.string();
-			file_info->_name = down_load_info->_img_name;
-			file_info->_seq = 0;
-
-			file_info->_total_size = file_size;
-			file_info->_trans_size = 0;
-			// 立即保存到 Redis，覆盖旧数据，设置过期时间
-			RedisMgr::GetInstance()->SetDownLoadInfo(file_info->_name, file_info);
-
-			// 在异步任务完成后调用
-			Json::Value rtvalue;
-			rtvalue["error"] = ErrorCodes::Success;
-			rtvalue["total_size"] = (double)(file_size);
-			rtvalue["message_id"] = msg_id;
-			rtvalue["sender"] = down_load_info->_sender_id;
-			rtvalue["receiver"] = down_load_info->_receiver_id;
-			rtvalue["img_name"] = down_load_info->_img_name;
-			std::string return_str = rtvalue.toStyledString();
-			session->Send(return_str, ID_IMG_CHAT_DOWN_SYNC_RSP);
+			
 	};
+
+	_fun_callbacks[ID_IMG_CHAT_DOWN_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_req_id,
+		const string& msg_data) {
+
+			Json::Reader reader;
+			Json::Value root;
+			reader.parse(msg_data, root);
+
+			auto seq = root["seq"].asInt();
+			auto name = root["name"].asString();
+			auto total_size_str = root["total_size"].asString();
+			auto trans_size_str = root["trans_size"].asString();
+			auto file_path = ConfigMgr::Inst().GetFileOutPath();
+			auto message_id = root["message_id"].asInt();
+			auto sender = root["sender_id"].asInt();
+			auto receiver = root["receiver_id"].asInt();
+			auto token = root["token"].asString();
+			auto uid = root["uid"].asInt();
+			auto req_type = root["req_type"].asString();
+
+			auto callback = [=](const Json::Value& result) {
+
+				// 在异步任务完成后调用
+				Json::Value rtvalue = result;
+				rtvalue["error"] = ErrorCodes::Success;
+				rtvalue["name"] = name;
+				rtvalue["sender_id"] = sender;
+				rtvalue["receiver_id"] = receiver;
+				rtvalue["req_type"] = req_type;
+				std::string return_str = rtvalue.toStyledString();
+				session->Send(return_str, ID_IMG_CHAT_DOWN_RSP);
+			};
+
+			// 使用 std::hash 对字符串进行哈希
+			std::hash<std::string> hash_fn;
+			size_t hash_value = hash_fn(name); // 生成哈希值
+			int index = hash_value % DOWN_LOAD_WORKER_COUNT;
+			std::cout << "Hash value: " << hash_value << std::endl;
+
+
+			//第一个包校验一下token是否合理
+			if (seq == 1) {
+				//从redis获取用户token是否正确
+				std::string uid_str = std::to_string(uid);
+				std::string token_key = USERTOKENPREFIX + uid_str;
+				std::string token_value = "";
+				bool success = RedisMgr::GetInstance()->Get(token_key, token_value);
+				Json::Value  rtvalue;
+				if (!success) {
+					rtvalue["error"] = ErrorCodes::UidInvalid;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					return;
+				}
+
+				if (token_value != token) {
+					rtvalue["error"] = ErrorCodes::TokenInvalid;
+					std::string return_str = rtvalue.toStyledString();
+					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					return;
+				}
+			}
+
+			auto sender_str = std::to_string(sender);
+			//转化为字符串
+			auto uid_str = std::to_string(uid);
+			auto file_path_str = (file_path / sender_str / name).string();
+
+		    auto down_load_task = std::make_shared<DownloadTask>(session, uid, name, seq, file_path_str, callback);
+
+			FileSystem::GetInstance()->PostDownloadTaskToQue(down_load_task,index);
+	};
+	
 }
 
 void LogicWorker::task_callback(std::shared_ptr<LogicNode> task)

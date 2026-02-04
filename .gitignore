@@ -34,4 +34,5 @@ ui_*.h
 /server/ChatServer/*.log
 /client/llfcchat/llfcchat.pro.user.92bdd7d
 client/llfcchat/release/
+bin/static/*
 

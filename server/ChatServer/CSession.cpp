@@ -270,7 +270,7 @@ void CSession::NotifyChatImgRecv(const ::message::NotifyChatImgReq* request) {
 	rtvalue["sender_id"] = request->from_uid();
 	rtvalue["receiver_id"] = request->to_uid();
 	rtvalue["img_name"] = request->file_name();
-	rtvalue["total_size"] = int(request->total_size());
+	rtvalue["total_size"] = std::to_string(request->total_size());
 	rtvalue["thread_id"] = request->thread_id();
 
 	std::string return_str = rtvalue.toStyledString();

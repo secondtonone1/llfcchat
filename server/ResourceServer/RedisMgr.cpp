@@ -503,8 +503,8 @@ bool RedisMgr::SetFileInfo(const std::string& name, std::shared_ptr<FileInfo> fi
 	root["file_path_str"] = file_info->_file_path_str;
 	root["name"] = file_info->_name;
 	root["seq"] = file_info->_seq;
-	root["total_size"] = file_info->_total_size;
-	root["trans_size"] = file_info->_trans_size;
+	root["total_size"] = std::to_string(file_info->_total_size);
+	root["trans_size"] = std::to_string(file_info->_trans_size);
 	auto file_info_str = root.toStyledString();
 	auto redis_key = "file_upload_" + name;
 	bool success = SetExp(redis_key, file_info_str, 3600);
@@ -517,8 +517,8 @@ bool RedisMgr::SetDownLoadInfo(const std::string& name, std::shared_ptr<FileInfo
 	root["file_path_str"] = file_info->_file_path_str;
 	root["name"] = file_info->_name;
 	root["seq"] = file_info->_seq;
-	root["total_size"] = file_info->_total_size;
-	root["trans_size"] = file_info->_trans_size;
+	root["total_size"] = std::to_string(file_info->_total_size);
+	root["trans_size"] = std::to_string(file_info->_trans_size);
 	auto file_info_str = root.toStyledString();
 	auto redis_key = "file_download_" + name;
 	bool success = SetExp(redis_key, file_info_str, 3600);
@@ -554,8 +554,8 @@ std::shared_ptr<FileInfo> RedisMgr::GetFileInfo(const std::string& name) {
 		file_info->_file_path_str = root["file_path_str"].asString();
 		file_info->_name = root["name"].asString();
 		file_info->_seq = root["seq"].asInt();
-		file_info->_total_size = root["total_size"].asInt();
-		file_info->_trans_size = root["trans_size"].asInt();
+		file_info->_total_size = std::stoll(root["total_size"].asString());
+		file_info->_trans_size = std::stoll(root["trans_size"].asString());
 	}
 	catch (const std::exception& e) {
 		std::cout << "Error parsing file info fields for name " << name << ": " << e.what() << std::endl;
@@ -590,8 +590,8 @@ std::shared_ptr<FileInfo> RedisMgr::GetDownloadInfo(const std::string& name) {
 		file_info->_file_path_str = root["file_path_str"].asString();
 		file_info->_name = root["name"].asString();
 		file_info->_seq = root["seq"].asInt();
-		file_info->_total_size = root["total_size"].asInt();
-		file_info->_trans_size = root["trans_size"].asInt();
+		file_info->_total_size = std::stoll(root["total_size"].asString());
+		file_info->_trans_size = std::stoll(root["trans_size"].asString());
 	}
 	catch (const std::exception& e) {
 		std::cout << "Error parsing file info fields for name " << name << ": " << e.what() << std::endl;

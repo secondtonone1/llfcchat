@@ -90,7 +90,13 @@ void PictureBubble::setProgress(int value)
 
 void PictureBubble::showProgress(bool show)
 {
-    m_progressBar->show();
+    if (show) {
+        m_progressBar->show();
+    }
+    else {
+        m_progressBar->hide();
+    }
+    
     adjustSize();
 }
 
@@ -117,8 +123,6 @@ void PictureBubble::setState(TransferState state)
         _msg_info->_transfer_state = state;
     }
 
-    updateIconOverlay();
-
     // 根据状态显示/隐藏进度条
     switch (state) {
     case TransferState::Downloading:
@@ -137,20 +141,35 @@ void PictureBubble::setState(TransferState state)
         showProgress(false);
         break;
     }
+
+    updateIconOverlay();
 }
 
 void PictureBubble::setMsgInfo(std::shared_ptr<MsgInfo> msg)
 {
     _msg_info = msg;
     if (_msg_info->_transfer_state == TransferState::Uploading) {
-        m_state = TransferState::Uploading;
+        setState(TransferState::Uploading);
         return;
     }
 
     if (_msg_info->_transfer_state == TransferState::Downloading) {
-        m_state = TransferState::Downloading;
+        setState(TransferState::Downloading);
         return;
     }
+}
+
+void PictureBubble::setDownloadFinish(std::shared_ptr<MsgInfo> msg,QString file_path) {
+    m_progressBar->setValue(100);
+    setState(TransferState::Completed);
+    auto picture = QPixmap(file_path);
+    QPixmap pix = picture.scaled(QSize(PIC_MAX_WIDTH, PIC_MAX_HEIGHT),
+        Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    m_pixmapSize = pix.size();
+    m_picLabel->setPixmap(pix);
+    m_picLabel->setFixedSize(pix.size());
+    adjustSize();
+    updateIconOverlay();
 }
 
 void PictureBubble::onPictureClicked()

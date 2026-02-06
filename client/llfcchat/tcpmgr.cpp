@@ -736,9 +736,25 @@ void TcpMgr::initHandlers()
             auto msg_content = data["msg_content"].toString();
             QString chat_time = data["chat_time"].toString();
             int status = data["status"].toInt();
-            auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
-                ChatMsgType::TEXT, msg_content, send_uid, status,chat_time);
-            chat_datas.push_back(chat_data);
+            int msg_type = data["msg_type"].toInt();
+            if (msg_type == int(ChatMsgType::TEXT)) {
+                auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                    ChatMsgType::TEXT, msg_content, send_uid, status, chat_time);
+                    chat_datas.push_back(chat_data);
+                    continue;
+            }
+            
+            if (msg_type == int(ChatMsgType::PIC)) {
+                continue;
+            }
+                //预览图先默认空白，md5为空
+             /*   file_info = std::make_shared<MsgInfo>(MsgType::IMG_MSG, img_path_str, CreateLoadingPlaceholder(200, 200), img_name, total_size, "");
+                UserMgr::GetInstance()->AddTransFile(img_name, file_info);
+                auto chat_data = std::make_shared<ImgChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                    ChatMsgType::TEXT, msg_content, send_uid, status, chat_time);*/
+            
+    
+           
         }
 
         //发送信号通知界面

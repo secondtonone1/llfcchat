@@ -509,6 +509,7 @@ void LogicSystem::DealChatTextMsg(std::shared_ptr<CSession> session, const short
 		chat_msg->thread_id = thread_id;
 		chat_msg->content = content;
 		chat_msg->status = 2;
+		chat_msg->msg_type = int(ChatMsgType::TEXT);
 		chat_datas.push_back(chat_msg);
 	}
 
@@ -909,6 +910,7 @@ void LogicSystem::LoadChatMsg(std::shared_ptr<CSession> session,
 		chat_data["msg_content"] = chat.content;
 		chat_data["chat_time"] = chat.chat_time;
 		chat_data["status"] = chat.status;
+		chat_data["msg_type"] = chat.msg_type;
 		rtvalue["chat_datas"].append(chat_data);
 	}
 
@@ -952,7 +954,7 @@ void LogicSystem::DealChatImgMsg(std::shared_ptr<CSession> session,
 	chat_msg->thread_id = thread_id;
 	chat_msg->content = unique_name;
 	chat_msg->status = MsgStatus::UN_UPLOAD;
-
+	chat_msg->msg_type = int(ChatMsgType::PIC);
 
 	//²åÈëÊý¾Ý¿â
 	MysqlMgr::GetInstance()->AddChatMsg(chat_msg);

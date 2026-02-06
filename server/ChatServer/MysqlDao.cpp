@@ -888,7 +888,7 @@ std::shared_ptr<PageResult> MysqlDao::LoadChatMsg(int thread_id, int last_messag
 		// SQL：多取一条，用于判断是否还有更多
 		const std::string sql = R"(
         SELECT message_id, thread_id, sender_id, recv_id, content,
-               created_at, updated_at, status
+               created_at, updated_at, status,msg_type
         FROM chat_message
         WHERE thread_id = ?
           AND message_id > ?
@@ -916,6 +916,7 @@ std::shared_ptr<PageResult> MysqlDao::LoadChatMsg(int thread_id, int last_messag
 			msg.content = rs->getString("content");
 			msg.chat_time = rs->getString("created_at");
 			msg.status = rs->getInt("status");
+			msg.msg_type = rs->getInt("msg_type");
 			page_res->messages.push_back(std::move(msg));
 		}
 
@@ -948,8 +949,8 @@ bool MysqlDao::AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas)
 		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
 			conn->prepareStatement(
 				"INSERT INTO chat_message "
-				"(thread_id, sender_id, recv_id, content, created_at, updated_at, status) "
-				"VALUES (?, ?, ?, ?, ?, ?, ?)"
+				"(thread_id, sender_id, recv_id, content, created_at, updated_at, status,msg_type) "
+				"VALUES (?, ?, ?, ?, ?, ?, ?,?)"
 			)
 		);
 
@@ -964,6 +965,7 @@ bool MysqlDao::AddChatMsg(std::vector<std::shared_ptr<ChatMessage>>& chat_datas)
 			pstmt->setString(6, msg->chat_time);  // updated_at
 
 			pstmt->setInt(7, msg->status);
+			pstmt->setInt(8, msg->msg_type);
 			pstmt->executeUpdate();
 
 			// 2. 取 LAST_INSERT_ID()
@@ -1009,8 +1011,8 @@ bool MysqlDao::AddChatMsg(std::shared_ptr<ChatMessage> chat_data) {
 		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
 			conn->prepareStatement(
 				"INSERT INTO chat_message "
-				"(thread_id, sender_id, recv_id, content, created_at, updated_at, status) "
-				"VALUES (?, ?, ?, ?, ?, ?, ?)"
+				"(thread_id, sender_id, recv_id, content, created_at, updated_at, status,msg_type) "
+				"VALUES (?, ?, ?, ?, ?, ?, ?,?)"
 			)
 			);
 
@@ -1022,6 +1024,7 @@ bool MysqlDao::AddChatMsg(std::shared_ptr<ChatMessage> chat_data) {
 		pstmt->setString(5, chat_data->chat_time);  // created_at
 		pstmt->setString(6, chat_data->chat_time);  // updated_at
 		pstmt->setInt(7, chat_data->status);
+		pstmt->setInt(8, chat_data->msg_type);
 
 		pstmt->executeUpdate();
 
@@ -1063,7 +1066,7 @@ std::shared_ptr<ChatMessage> MysqlDao::GetChatMsg(int message_id)
 		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
 			conn->prepareStatement(
 				"SELECT message_id, thread_id, sender_id, recv_id, "
-				"content, created_at, updated_at, status "
+				"content, created_at, updated_at, status , msg_type"
 				"FROM chat_message WHERE message_id = ?"
 			)
 			);
@@ -1080,6 +1083,7 @@ std::shared_ptr<ChatMessage> MysqlDao::GetChatMsg(int message_id)
 			msg->content = rs->getString("content");
 			msg->chat_time = rs->getString("created_at");
 			msg->status = rs->getInt("status");
+			msg->msg_type = rs->getInt("msg_type");
 
 			return msg;
 		}

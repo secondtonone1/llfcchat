@@ -36,6 +36,7 @@ public:
     void BatchSend(std::shared_ptr<MsgInfo> msg_info, int sender, int receiver);
     void ContinueUploadFile(QString unique_name);
     void ContinueDownloadFile(QString unique_name);
+    void CopyFile(QString src_path, QString dst_path, QString dst_dir);
 private:
     void initHandlers();
     explicit FileTcpMgr(QObject *parent = nullptr);

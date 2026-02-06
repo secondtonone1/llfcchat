@@ -488,6 +488,14 @@ void FileTcpMgr::initHandlers()
 		if (file_info->_last_confirmed_seq == file_info->_max_seq) {
 			//更新已经传输的文件大小
 			file_info->_rsp_size = file_info->_total_size;
+			//将文件移动到用户自己的资源目录
+			//客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+			auto uid = UserMgr::GetInstance()->GetUid();
+			QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+			QString img_path_str = storageDir + "/user/" + QString::number(uid) + "/chatimg/" + QString::number(file_info->_sender);
+			auto destPath = img_path_str + '/' + file_info->_unique_name;
+
+			CopyFile(file_info->_text_or_url,destPath, img_path_str);
 			//通知界面显示
 			emit sig_update_upload_progress(file_info);
 			UserMgr::GetInstance()->RmvTransFileByName(name);
@@ -566,6 +574,14 @@ void FileTcpMgr::initHandlers()
 		qDebug() << "recv : " << name << "file seq is " << seq;
 		//判断最大序列和最后确认序列号相等，说明收全了
 		if (file_info->_last_confirmed_seq == file_info->_max_seq) {
+
+			auto uid = UserMgr::GetInstance()->GetUid();
+			QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+			QString img_path_str = storageDir + "/user/" + QString::number(uid) + "/chatimg/" + QString::number(file_info->_sender);
+			auto destPath = img_path_str + '/' + file_info->_unique_name;
+
+			CopyFile(file_info->_text_or_url, destPath, img_path_str);
+
 			//更新已经传输的文件大小
 			file_info->_rsp_size = file_info->_total_size;
 			//通知界面显示
@@ -643,6 +659,14 @@ void FileTcpMgr::initHandlers()
 		qDebug() << "recv : " << name << "file seq is " << seq;
 		//判断最大序列和最后确认序列号相等，说明收全了
 		if (file_info->_last_confirmed_seq == file_info->_max_seq) {
+
+			auto uid = UserMgr::GetInstance()->GetUid();
+			QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+			QString img_path_str = storageDir + "/user/" + QString::number(uid) + "/chatimg/" + QString::number(file_info->_sender);
+			auto destPath = img_path_str + '/' + file_info->_unique_name;
+
+			CopyFile(file_info->_text_or_url, destPath, img_path_str);
+
 			//更新已经传输的文件大小
 			file_info->_rsp_size = file_info->_total_size;
 			//通知界面显示
@@ -786,6 +810,24 @@ void FileTcpMgr::initHandlers()
 	});
 }
 
+void FileTcpMgr::CopyFile(QString src_path, QString dst_path, QString dst_dir) {
+	//将文件移动到用户自己的资源目录
+	//客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+
+	QDir chatimgDir(dst_dir);
+	if (!chatimgDir.exists()) {
+		chatimgDir.mkpath(".");  // 创建当前路径
+	}
+
+	if (QFile::copy(src_path, dst_path)) {
+		qDebug() << "文件拷贝成功";
+
+	}
+	else {
+		qDebug() << "文件拷贝失败";
+
+	}
+}
 
 void FileTcpMgr::ContinueUploadFile(QString unique_name) {
 	emit sig_continue_upload_file(unique_name);

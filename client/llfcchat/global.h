@@ -269,7 +269,8 @@ enum class ChatFormType {
 enum class ChatMsgType {
     TEXT = 0,
     PIC = 1,
-    FILE = 2
+    VIDEO = 2,
+    FILE = 3
 };
 
 

@@ -318,7 +318,7 @@ void LogicWorker::RegisterCallBacks()
 			auto uid = root["uid"].asInt();
 			auto token = root["token"].asString();
 			auto client_path = root["client_path"].asString();
-
+			auto req_type = root["req_type"].asString();
 			//转化为字符串
 			auto uid_str = std::to_string(uid);
 
@@ -331,6 +331,7 @@ void LogicWorker::RegisterCallBacks()
 				Json::Value rtvalue = result;
 				rtvalue["client_path"] = client_path;
 				rtvalue["name"] = name;
+				rtvalue["req_type"] = req_type;
 				std::string return_str = rtvalue.toStyledString();
 				session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
 			};
@@ -667,17 +668,14 @@ void LogicWorker::RegisterCallBacks()
 			auto receiver = root["receiver_id"].asInt();
 			auto token = root["token"].asString();
 			auto uid = root["uid"].asInt();
-			auto req_type = root["req_type"].asString();
-
+			
 			auto callback = [=](const Json::Value& result) {
-
 				// 在异步任务完成后调用
 				Json::Value rtvalue = result;
 				rtvalue["error"] = ErrorCodes::Success;
 				rtvalue["name"] = name;
 				rtvalue["sender_id"] = sender;
 				rtvalue["receiver_id"] = receiver;
-				rtvalue["req_type"] = req_type;
 				std::string return_str = rtvalue.toStyledString();
 				session->Send(return_str, ID_IMG_CHAT_DOWN_RSP);
 			};
@@ -700,14 +698,14 @@ void LogicWorker::RegisterCallBacks()
 				if (!success) {
 					rtvalue["error"] = ErrorCodes::UidInvalid;
 					std::string return_str = rtvalue.toStyledString();
-					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					session->Send(return_str, ID_IMG_CHAT_DOWN_RSP);
 					return;
 				}
 
 				if (token_value != token) {
 					rtvalue["error"] = ErrorCodes::TokenInvalid;
 					std::string return_str = rtvalue.toStyledString();
-					session->Send(return_str, ID_DOWN_LOAD_FILE_RSP);
+					session->Send(return_str, ID_IMG_CHAT_DOWN_RSP);
 					return;
 				}
 			}

@@ -103,11 +103,10 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
             // 如果是用户上传的头像，获取存储目录
             QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
             auto uid = UserMgr::GetInstance()->GetUid();
-            QDir avatarsDir(storageDir + "/user/" + QString::number(uid) + "/avatars");
-            auto file_name = QFileInfo(self_info->_icon).fileName();
+            QDir avatarsDir(storageDir + "/user/" + QString::number(msg->GetSendUid()) + "/avatars");
             // 确保目录存在
             if (avatarsDir.exists()) {
-                QString avatarPath = avatarsDir.filePath(file_name); // 获取上传头像的完整路径
+                QString avatarPath = avatarsDir.filePath(friend_info->_icon); // 获取上传头像的完整路径
                 QPixmap pixmap(avatarPath); // 加载上传的头像图片
                 if (!pixmap.isNull()) {
                     pChatItem->setUserIcon(pixmap);
@@ -115,7 +114,7 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
                 else {
                     qWarning() << "无法加载上传的头像：" << avatarPath;
                     auto icon_label = pChatItem->getIconLabel();
-                    LoadHeadIcon(avatarPath, icon_label, file_name,"self_icon");
+                    LoadHeadIcon(avatarPath, icon_label, friend_info->_icon,"other_icon");
                 }
             }
             else {
@@ -123,8 +122,8 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg)
                 //创建目录
                 avatarsDir.mkpath(".");         
                 auto icon_label = pChatItem->getIconLabel();
-                QString avatarPath = avatarsDir.filePath(file_name);
-                LoadHeadIcon(avatarPath, icon_label, file_name, "self_icon");
+                QString avatarPath = avatarsDir.filePath(friend_info->_icon);
+                LoadHeadIcon(avatarPath, icon_label, friend_info->_icon, "other_icon");
             }
         }
 

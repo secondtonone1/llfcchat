@@ -1052,7 +1052,7 @@ std::shared_ptr<ChatMessage> MysqlDao::GetChatMsgById(int message_id) {
 		auto pstmt = std::unique_ptr<sql::PreparedStatement>(
 			conn->prepareStatement(
 				"SELECT message_id, thread_id, sender_id, recv_id, "
-				"content, created_at, updated_at, status "
+				"content, created_at, updated_at, status , msg_type "
 				"FROM chat_message WHERE message_id = ?"
 			)
 			);
@@ -1069,7 +1069,7 @@ std::shared_ptr<ChatMessage> MysqlDao::GetChatMsgById(int message_id) {
 			msg->content = rs->getString("content");
 			msg->chat_time = rs->getString("created_at");
 			msg->status = rs->getInt("status");
-
+			msg->msg_type = rs->getInt("msg_type");
 			return msg;
 		}
 

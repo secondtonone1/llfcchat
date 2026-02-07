@@ -911,6 +911,7 @@ void LogicSystem::LoadChatMsg(std::shared_ptr<CSession> session,
 		chat_data["chat_time"] = chat.chat_time;
 		chat_data["status"] = chat.status;
 		chat_data["msg_type"] = chat.msg_type;
+		chat_data["receiver"] = chat.recv_id;
 		rtvalue["chat_datas"].append(chat_data);
 	}
 

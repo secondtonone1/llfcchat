@@ -79,8 +79,11 @@ void PictureBubble::adjustSize()
     setFixedSize(width, height);
 }
 
-void PictureBubble::setProgress(int value)
+void PictureBubble::setProgress(int value, int total_value)
 {
+    if (m_total_size != total_value) {
+        m_total_size = total_value;
+    }
     float percent = (value / (m_total_size*1.0))*100;
     m_progressBar->setValue(percent);
     if (percent >= 100) {

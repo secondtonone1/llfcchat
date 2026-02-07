@@ -646,9 +646,39 @@ void LogicWorker::RegisterCallBacks()
 			);
 	};
 
-	_fun_callbacks[ID_IMG_CHAT_DOWN_SYNC_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_id,
+	_fun_callbacks[ID_IMG_CHAT_DOWN_INFO_SYNC_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_id,
 		const string& msg_data) {
-			
+			Json::Reader reader;
+			Json::Value root;
+			reader.parse(msg_data, root);
+			auto message_id = root["message_id"].asInt();
+			auto chat_msg = MysqlMgr::GetInstance()->GetChatMsgById(message_id);
+			if (chat_msg == nullptr) {
+				Json::Value rtvalue;
+				rtvalue["error"] = ErrorCodes::MsgIdErr;
+				return;
+			}
+
+			// 资源文件路径
+			auto file_dir = ConfigMgr::Inst().GetFileOutPath();
+			//该消息是接收方客户端发送过来的,服务器将资源存储在发送方的文件夹中
+			auto uid_str = std::to_string(chat_msg->sender_id);
+			auto file_path = (file_dir / uid_str / chat_msg->content);
+			boost::uintmax_t file_size = boost::filesystem::file_size(file_path);
+
+			// 在异步任务完成后调用
+			Json::Value rtvalue ;
+			rtvalue["error"] = ErrorCodes::Success;
+			rtvalue["message_id"] = chat_msg->message_id;
+			rtvalue["thread_id"] = chat_msg->thread_id;
+			rtvalue["sender_id"] = chat_msg->sender_id;
+			rtvalue["recv_id"] = chat_msg->recv_id;
+			rtvalue["name"] = chat_msg->content;
+			rtvalue["msg_type"] = chat_msg->msg_type;
+			rtvalue["status"] = chat_msg->status;
+			rtvalue["total_size"] = std::to_string(file_size);
+ 			std::string return_str = rtvalue.toStyledString();
+			session->Send(return_str, ID_IMG_CHAT_DOWN_INFO_SYNC_RSP);
 	};
 
 	_fun_callbacks[ID_IMG_CHAT_DOWN_REQ] = [this](std::shared_ptr<CSession> session, const short& msg_req_id,

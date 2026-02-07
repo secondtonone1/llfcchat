@@ -434,7 +434,8 @@ void ChatDialog::slot_create_private_chat(int uid, int other_id, int thread_id)
 	return;
 }
 
-void ChatDialog::slot_load_chat_msg(int thread_id, int msg_id, bool load_more, std::vector<std::shared_ptr<TextChatData>> msglists)
+void ChatDialog::slot_load_chat_msg(int thread_id, int msg_id, bool load_more, 
+	std::vector<std::shared_ptr<ChatDataBase>> msglists)
 {
 	_cur_load_chat->SetLastMsgId(msg_id);
 	//加载聊天信息

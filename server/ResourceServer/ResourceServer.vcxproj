@@ -169,6 +169,7 @@
     <ClInclude Include="const.h" />
     <ClInclude Include="CServer.h" />
     <ClInclude Include="CSession.h" />
+    <ClInclude Include="data.h" />
     <ClInclude Include="DistLock.h" />
     <ClInclude Include="FileInfo.h" />
     <ClInclude Include="FileSystem.h" />

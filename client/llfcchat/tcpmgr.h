@@ -34,6 +34,9 @@ private:
     void registerMetaType();
     void initHandlers();
     void handleMsg(ReqId id, int len, QByteArray data);
+    void CreatePlaceholderImgMsgL(QString img_path_str, QString msg_content,
+        int msg_id, int thread_id, int send_uid, int recv_id, int status, QString chat_time,
+        std::vector<std::shared_ptr<ChatDataBase>>& chat_datas);
     QTcpSocket _socket;
     QString _host;
     uint16_t _port;
@@ -76,7 +79,7 @@ signals:
         std::vector<std::shared_ptr<ChatThreadInfo>> chat_list);
     void sig_create_private_chat(int uid, int other_id, int thread_id);
     void sig_load_chat_msg(int thread_id, int message_id, bool load_more,
-        std::vector<std::shared_ptr<TextChatData>> msg_list);
+        std::vector<std::shared_ptr<ChatDataBase>> msg_list);
 
     void sig_chat_msg_rsp(int thread_id, std::vector<std::shared_ptr<TextChatData>> msg_list);
     void sig_chat_img_rsp(int thread_id, std::shared_ptr<ImgChatData> msg_list);

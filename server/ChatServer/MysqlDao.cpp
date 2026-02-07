@@ -883,8 +883,6 @@ std::shared_ptr<PageResult> MysqlDao::LoadChatMsg(int thread_id, int last_messag
 	try {
 		auto page_res = std::make_shared<PageResult>();
 		page_res->load_more = false;
-		page_res->next_cursor = last_message_id;
-
 		// SQL：多取一条，用于判断是否还有更多
 		const std::string sql = R"(
         SELECT message_id, thread_id, sender_id, recv_id, content,
@@ -919,6 +917,12 @@ std::shared_ptr<PageResult> MysqlDao::LoadChatMsg(int thread_id, int last_messag
 			msg.msg_type = rs->getInt("msg_type");
 			page_res->messages.push_back(std::move(msg));
 		}
+		if (page_res->messages.size() > page_size) {
+			page_res->messages.pop_back();
+			page_res->load_more = true;
+		}
+
+		page_res->next_cursor = page_res->messages.back().message_id;
 
 		return page_res;
 	}

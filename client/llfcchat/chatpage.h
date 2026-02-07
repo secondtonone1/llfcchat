@@ -17,7 +17,7 @@ public:
     explicit ChatPage(QWidget *parent = nullptr);
     ~ChatPage();
     void SetChatData(std::shared_ptr<ChatThreadData> chat_data);
-    void AppendChatMsg(std::shared_ptr<ChatDataBase> msg);
+    void AppendChatMsg(std::shared_ptr<ChatDataBase> msg, bool rsp=true);
     void UpdateChatStatus(std::shared_ptr<ChatDataBase> msg);
     void UpdateImgChatStatus(std::shared_ptr<ImgChatData> img_msg);
     void SetSelfIcon(ChatItemBase* pChatItem, QString icon);

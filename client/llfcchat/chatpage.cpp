@@ -79,8 +79,14 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg, bool rsp)
         }else if (msg->GetMsgType() == ChatMsgType::PIC) {
             auto img_msg = dynamic_pointer_cast<ImgChatData>(msg);
             auto pic_bubble =  new PictureBubble(img_msg->_msg_info->_preview_pix, role, img_msg->_msg_info->_total_size);
-            pic_bubble->setState(img_msg->_msg_info->_transfer_state);
+            pic_bubble->setMsgInfo(img_msg->_msg_info);
             pBubble = pic_bubble;
+
+            //连接暂停和恢复信号
+            connect(dynamic_cast<PictureBubble*>(pBubble), &PictureBubble::pauseRequested,
+                this, &ChatPage::on_clicked_paused);
+            connect(dynamic_cast<PictureBubble*>(pBubble), &PictureBubble::resumeRequested,
+                this, &ChatPage::on_clicked_resume);
         }
      
         pChatItem->setWidget(pBubble);
@@ -146,8 +152,14 @@ void ChatPage::AppendChatMsg(std::shared_ptr<ChatDataBase> msg, bool rsp)
         else if(msg->GetMsgType() == ChatMsgType::PIC) {
             auto img_msg = dynamic_pointer_cast<ImgChatData>(msg);
             auto pic_bubble = new PictureBubble(img_msg->_msg_info->_preview_pix, role, img_msg->_msg_info->_total_size);
-            pic_bubble->setState(img_msg->_msg_info->_transfer_state);
+            pic_bubble->setMsgInfo(img_msg->_msg_info);
             pBubble = pic_bubble;
+
+            //连接暂停和恢复信号
+            connect(dynamic_cast<PictureBubble*>(pBubble), &PictureBubble::pauseRequested,
+                this, &ChatPage::on_clicked_paused);
+            connect(dynamic_cast<PictureBubble*>(pBubble), &PictureBubble::resumeRequested,
+                this, &ChatPage::on_clicked_resume);
         }
         pChatItem->setWidget(pBubble);
         auto status = msg->GetStatus();
@@ -343,6 +355,14 @@ void ChatPage::DownloadFileFinished(std::shared_ptr<MsgInfo> msg_info, QString f
         auto bubble = iter.value()->getBubble();
         PictureBubble* pic_bubble = dynamic_cast<PictureBubble*>(bubble);
         pic_bubble->setDownloadFinish(msg_info, file_path);
+        auto chat_data_base = _chat_data->GetChatDataBase(msg_info->_msg_id);
+        if (chat_data_base == nullptr) {
+            return;
+        }
+        auto img_data = dynamic_pointer_cast<ImgChatData>(chat_data_base);
+        img_data->_msg_info->_preview_pix =  QPixmap(file_path);
+        img_data->_msg_info->_transfer_state = TransferState::Completed;   
+        img_data->_msg_info->_current_size = img_data->_msg_info->_total_size;
     }
 }
 

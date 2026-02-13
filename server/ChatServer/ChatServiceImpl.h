@@ -46,7 +46,7 @@ public:
 		const KickUserReq* request, KickUserRsp* response) override;
 
 	void RegisterServer(std::shared_ptr<CServer> pServer);
-	//接收客户端发送的图片聊天通知
+	//接收Resource服务器端发送的图片聊天通知
 	virtual ::grpc::Status NotifyChatImgMsg(::grpc::ServerContext* context, const ::message::NotifyChatImgReq* request, ::message::NotifyChatImgRsp* response) override;
 private:
 	std::shared_ptr<CServer> _p_server;

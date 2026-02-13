@@ -77,6 +77,7 @@ void ChatThreadData::UpdateProgress(std::shared_ptr<MsgInfo> msg) {
     if (msg->_msg_type == MsgType::IMG_MSG) {
         auto img_chat_data = std::dynamic_pointer_cast<ImgChatData>(iter.value());
         img_chat_data->_msg_info->_rsp_size = msg->_rsp_size;
+        img_chat_data->_msg_info->_current_size = msg->_current_size;
     }
 }
 

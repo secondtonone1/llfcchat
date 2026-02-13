@@ -151,6 +151,7 @@ void PictureBubble::setState(TransferState state)
 void PictureBubble::setMsgInfo(std::shared_ptr<MsgInfo> msg)
 {
     _msg_info = msg;
+    setProgress(_msg_info->_current_size, _msg_info->_total_size);
     if (_msg_info->_transfer_state == TransferState::Uploading) {
         setState(TransferState::Uploading);
         return;
@@ -158,6 +159,16 @@ void PictureBubble::setMsgInfo(std::shared_ptr<MsgInfo> msg)
 
     if (_msg_info->_transfer_state == TransferState::Downloading) {
         setState(TransferState::Downloading);
+        return;
+    }
+    //解决切换bug
+    if (_msg_info->_transfer_state == TransferState::Completed) {
+        setState(TransferState::Completed);
+        return;
+    }
+
+    if (_msg_info->_transfer_state == TransferState::Paused) {
+        setState(TransferState::Paused);
         return;
     }
 }
@@ -177,6 +188,9 @@ void PictureBubble::setDownloadFinish(std::shared_ptr<MsgInfo> msg,QString file_
 
 void PictureBubble::onPictureClicked()
 {
+    if (_msg_info == nullptr) {
+        return;
+    }
     switch (m_state) {
     case TransferState::Downloading:
     case TransferState::Uploading:

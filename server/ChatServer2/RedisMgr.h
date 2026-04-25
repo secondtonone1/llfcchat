@@ -5,6 +5,7 @@
 #include <atomic>
 #include <mutex>
 #include "Singleton.h"
+#include <cstring>
 class RedisConPool {
 public:
 	RedisConPool(size_t poolSize, const char* host, int port, const char* pwd)
@@ -77,7 +78,7 @@ public:
 	}
 
 	redisContext* getConNonBlock() {
-		std::lock_guard<std::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 		if (b_stop_) {
 			return nullptr;
 		}
@@ -108,78 +109,8 @@ public:
 
 private:
 
-	void checkThreadPro() {
-		size_t pool_size;
-		{
-			//先拿到当前的连接数
-			std::lock_guard<std::mutex> lock(mutex_);
-			pool_size = connections_.size();
-		}
-
-		for (int i = 0; i < pool_size && !b_stop_; i++) {
-			redisContext* context = nullptr;
-			//1 取出一个连接(持有锁)
-			context = getConNonBlock();
-			if (context == nullptr) {
-				break;
-			}
-
-			redisReply* reply = nullptr;
-			try {
-				reply = (redisReply*)redisCommand(context, "PING");
-				//2. 先看底层 I/O 协议层有没有错
-				if (context->err) {
-					std::cout << "Connection error:" << context->err << std::endl;
-					if (reply) {
-						freeReplyObject(reply);
-					}
-
-					redisFree(context);
-					fail_count_++;
-					continue;
-				}
-
-				//3. 再看Redis自身返回的是不是ERROR
-				if (!reply || reply->type == REDIS_REPLY_ERROR) {
-					std::cout << "reply is null,  redis ping failed: " << std::endl;
-					if (reply) {
-						freeReplyObject(reply);
-					}
-
-					redisFree(context);
-					fail_count_++;
-					continue;
-				}
-
-				//4.如果都没有问题，则把连接返回连接池
-				//std::cout << "connection alive" << std::endl;
-				freeReplyObject(reply);
-				returnConnection(context);
-			}catch(std::exception& exp){
-				if (reply) {
-					freeReplyObject(reply);
-				}
-
-				redisFree(context);
-				fail_count_++;
-			}
-		}
-
-		//执行重连操作
-		while (fail_count_ > 0) {
-			auto res = reconnect();
-			if (res) {
-					fail_count_--;
-			}
-			else {
-				//留给一次再尝试
-				break;
-			}
-		}
-	}
-
-	bool reconnect() {
-		auto* context = redisConnect(host_, port_);
+	bool  reconnect() {
+		auto context = redisConnect(host_, port_);
 		if (context == nullptr || context->err != 0) {
 			if (context != nullptr) {
 				redisFree(context);
@@ -190,18 +121,90 @@ private:
 		auto reply = (redisReply*)redisCommand(context, "AUTH %s", pwd_);
 		if (reply->type == REDIS_REPLY_ERROR) {
 			std::cout << "认证失败" << std::endl;
-			//执行释放操作
+			//执行成功 释放redisCommand执行后返回的redisReply所占用的内存
 			freeReplyObject(reply);
 			redisFree(context);
 			return false;
 		}
 
-		//执行成功，释放redisCommand执行后返回的redisReply所占用的内存
+		//执行成功 释放redisCommand执行后返回的redisReply所占用的内存
 		freeReplyObject(reply);
 		std::cout << "认证成功" << std::endl;
 		returnConnection(context);
 		return true;
 	}
+
+	void checkThreadPro() {
+			size_t pool_size;
+			{
+				// 先拿到当前连接数
+				std::lock_guard<std::mutex> lock(mutex_);
+				pool_size = connections_.size();
+			}
+
+			
+			for (int i = 0; i < pool_size && !b_stop_; ++i) {
+				redisContext* ctx = nullptr;
+				// 1) 取出一个连接(持有锁)
+				bool bsuccess = false;
+				auto * context = getConNonBlock();
+				if (context == nullptr) {
+					break;
+				}
+
+				redisReply* reply = nullptr;
+				try {
+					reply = (redisReply*)redisCommand(context, "PING");
+					// 2. 先看底层 I/O／协议层有没有错
+					if (context->err) {
+						std::cout << "Connection error: " << context->err << std::endl;
+						if (reply) {
+							freeReplyObject(reply);
+						}
+						redisFree(context);
+						fail_count_++;
+						continue;
+					}
+
+					// 3. 再看 Redis 自身返回的是不是 ERROR
+					if (!reply || reply->type == REDIS_REPLY_ERROR) {
+						std::cout << "reply is null, redis ping failed: " << std::endl;
+						if (reply) {
+							freeReplyObject(reply);
+						}
+						redisFree(context);
+						fail_count_++;
+						continue;
+					}
+					// 4. 如果都没问题，则还回去
+					//std::cout << "connection alive" << std::endl;
+					freeReplyObject(reply);
+					returnConnection(context);
+				}
+				catch (std::exception& exp) {
+					if (reply) {
+						freeReplyObject(reply);
+					}
+
+					redisFree(context);
+					fail_count_++;
+				}
+							
+			}
+
+			//执行重连操作
+			while (fail_count_ > 0) {
+				auto res = reconnect();
+				if(res){
+					fail_count_--;
+				}
+				else {
+					//留给下次再重试
+					break;
+				}
+			}
+	}
+	
 
 	void checkThread() {
 		std::lock_guard<std::mutex> lock(mutex_);
@@ -254,11 +257,11 @@ private:
 	const char* pwd_;
 	int port_;
 	std::queue<redisContext*> connections_;
+	std::atomic<int> fail_count_;
 	std::mutex mutex_;
 	std::condition_variable cond_;
 	std::thread  check_thread_;
 	int counter_;
-	std::atomic<int> fail_count_;
 };
 
 class RedisMgr: public Singleton<RedisMgr>, 

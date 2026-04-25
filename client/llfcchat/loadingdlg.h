@@ -12,7 +12,7 @@ class LoadingDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit LoadingDlg(QWidget *parent = nullptr);
+    explicit LoadingDlg(QWidget *parent = nullptr, QString tip = "Loading...");
     ~LoadingDlg();
 
 private:

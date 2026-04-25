@@ -141,10 +141,11 @@ bool ContactUserList::eventFilter(QObject *watched, QEvent *event)
 
             _load_pending = true;
 
-            QTimer::singleShot(100, [this](){
+            QTimer::singleShot(100, [this]() {
+
                 _load_pending = false;
-                QCoreApplication::quit(); // 完成后退出应用程序
-                });
+             });
+
             // 滚动到底部，加载新的联系人
             qDebug()<<"load more contact user";
             //发送信号通知聊天界面加载更多聊天内容
@@ -241,7 +242,7 @@ void ContactUserList::slot_auth_rsp(std::shared_ptr<AuthRsp> auth_rsp)
     int head_i = randomValue%heads.size();
 
     auto *con_user_wid = new ConUserItem();
-    con_user_wid->SetInfo(auth_rsp->_uid ,auth_rsp->_name, heads[head_i]);
+    con_user_wid->SetInfo(auth_rsp->_uid ,auth_rsp->_name, auth_rsp->_icon);
     QListWidgetItem *item = new QListWidgetItem;
     //qDebug()<<"chat_user_wid sizeHint is " << chat_user_wid->sizeHint();
     item->setSizeHint(con_user_wid->sizeHint());

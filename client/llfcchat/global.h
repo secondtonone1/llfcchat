@@ -19,6 +19,12 @@ extern std::function<void(QWidget*)> repolish;
 
 extern std::function<QString(QString)> xorString;
 
+/*
+* @brief 延迟执行
+*/
+
+extern void delay_run(int msecs);
+
 enum ReqId{
     ID_GET_VARIFY_CODE = 1001, //获取验证码
     ID_REG_USER = 1002, //注册用户
@@ -40,6 +46,12 @@ enum ReqId{
     ID_NOTIFY_OFF_LINE_REQ = 1021, //通知用户下线
     ID_HEART_BEAT_REQ = 1023,      //心跳请求
     ID_HEARTBEAT_RSP = 1024,       //心跳回复
+    ID_LOAD_CHAT_THREAD_REQ = 1025,      //加载聊天线程
+    ID_LOAD_CHAT_THREAD_RSP = 1026,      //加载聊天线程回复
+    ID_CREATE_PRIVATE_CHAT_REQ = 1027, //创建私聊请求
+    ID_CREATE_PRIVATE_CHAT_RSP = 1028, //创建私聊回复
+    ID_LOAD_CHAT_MSG_REQ = 1029,      //加载聊天消息
+    ID_LOAD_CHAT_MSG_RSP = 1030,      //加载聊天消息
 };
 
 enum ErrorCodes{
@@ -148,5 +160,23 @@ const std::vector<QString> names = {
 
 const int CHAT_COUNT_PER_PAGE = 13;
 
+enum MsgStatus{
+    UN_READ = 0,  //对方未读
+    SEND_FAILED = 1,  //发送失败
+    READED = 2  //对方已读
+};
+
+//聊天形式，私聊和群聊
+enum class ChatFormType {
+    PRIVATE = 0,
+    GROUP = 1
+};
+
+//聊天消息类型，文本，图片，文件等
+enum class ChatMsgType {
+    TEXT = 0,
+    PIC = 1,
+    FILE = 2
+};
 
 #endif // GLOBAL_H

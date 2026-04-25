@@ -26,10 +26,12 @@ QVector<MsgInfo> MessageTextEdit::getMsgList()
     QString doc = this->document()->toPlainText();
     QString text="";//存储文本信息
     int indexUrl = 0;
+    //这个是存储的富文本信息，包括图片的url以及文件的url
     int count = mMsgList.size();
 
     for(int index=0; index<doc.size(); index++)
     {
+        //如果遇到替换符，说明后面的是图片或者文件的url
         if(doc[index]==QChar::ObjectReplacementCharacter)
         {
             if(!text.isEmpty())
@@ -52,6 +54,7 @@ QVector<MsgInfo> MessageTextEdit::getMsgList()
         }
         else
         {
+            //追加字符到文本消息中
             text.append(doc[index]);
         }
     }

@@ -48,7 +48,9 @@ async function GetVarifyCode(call, callback) {
         let send_res = await emailModule.SendMail(mailOptions);
         console.log("send res is ", send_res)
 
-        callback(null, { email:  call.request.email,
+        callback(null, { 
+            email:  call.request.email,
+            code:uniqueId,
             error:const_module.Errors.Success
         }); 
         

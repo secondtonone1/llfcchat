@@ -141,9 +141,10 @@ INSERT INTO `user_id` VALUES (1058);
 -- ----------------------------
 DROP PROCEDURE IF EXISTS `reg_user`;
 delimiter ;;
-CREATE PROCEDURE `reg_user`(IN `new_name` VARCHAR(255), 
-    IN `new_email` VARCHAR(255), 
-    IN `new_pwd` VARCHAR(255), 
+CREATE PROCEDURE `reg_user`(
+    IN `new_name` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, 
+    IN `new_email` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, 
+    IN `new_pwd` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, 
     OUT `result` INT)
 BEGIN
     -- 如果在执行过程中遇到任何错误，则回滚事务

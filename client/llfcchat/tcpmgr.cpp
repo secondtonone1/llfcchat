@@ -1,22 +1,24 @@
 #include "tcpmgr.h"
 #include <QAbstractSocket>
 #include "usermgr.h"
+#include <QTimer>
+#include <QFile>
+#include <filetcpmgr.h>
+#include <QStandardPaths>
 
-TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_message_len(0)
+TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_message_len(0),_bytes_sent(0),_pending(false)
 {
-    QObject::connect(&_socket, &QTcpSocket::connected, [&]() {
+    registerMetaType();
+    QObject::connect(&_socket, &QTcpSocket::connected, this, [&]() {
            qDebug() << "Connected to server!";
            // 连接建立后发送消息
             emit sig_con_success(true);
        });
 
-       QObject::connect(&_socket, &QTcpSocket::readyRead, [&]() {
+       QObject::connect(&_socket, &QTcpSocket::readyRead, this, [&]() {
            // 当有数据可读时，读取所有数据
            // 读取所有数据并追加到缓冲区
            _buffer.append(_socket.readAll());
-
-           QDataStream stream(&_buffer, QIODevice::ReadOnly);
-           stream.setVersion(QDataStream::Qt_5_0);
 
            forever {
                 //先解析头部
@@ -26,13 +28,11 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
                        return; // 数据不够，等待更多数据
                    }
 
-                   // 预读取消息ID和消息长度，但不从缓冲区中移除
+                   // ✅ 每次都重新创建stream
+                   QDataStream stream(_buffer);
+                   stream.setVersion(QDataStream::Qt_5_0);
                    stream >> _message_id >> _message_len;
-
-                   //将buffer 中的前四个字节移除
-                   _buffer = _buffer.mid(sizeof(quint16) * 2);
-
-                   // 输出读取的数据
+                   _buffer.remove(0, sizeof(quint16) * 2);  // 使用remove代替mid赋值
                    qDebug() << "Message ID:" << _message_id << ", Length:" << _message_len;
 
                }
@@ -62,6 +62,7 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
 
        // 处理错误（适用于Qt 5.15之前的版本）
         QObject::connect(&_socket, static_cast<void (QTcpSocket::*)(QTcpSocket::SocketError)>(&QTcpSocket::error),
+                            this,
                             [&](QTcpSocket::SocketError socketError) {
                qDebug() << "Error:" << _socket.errorString() ;
                switch (socketError) {
@@ -90,24 +91,94 @@ TcpMgr::TcpMgr():_host(""),_port(0),_b_recv_pending(false),_message_id(0),_messa
          });
 
         // 处理连接断开
-        QObject::connect(&_socket, &QTcpSocket::disconnected, [&]() {
+        QObject::connect(&_socket, &QTcpSocket::disconnected, this,[&]() {
             qDebug() << "Disconnected from server.";
             //并且发送通知到界面
             emit sig_connection_closed();
         });
         //连接发送信号用来发送数据
         QObject::connect(this, &TcpMgr::sig_send_data, this, &TcpMgr::slot_send_data);
+
+        //连接发送信号
+        QObject::connect(&_socket, &QTcpSocket::bytesWritten, this, [this](qint64 bytes) {
+                     //更新发送数据
+                    _bytes_sent += bytes;
+                    //未发送完整
+                    if (_bytes_sent < _current_block.size()) {
+                        //继续发送
+                        auto data_to_send = _current_block.mid(_bytes_sent);
+                        _socket.write(data_to_send);
+                        return;
+                    }
+
+                    //发送完全，则查看队列是否为空
+                    if (_send_queue.isEmpty()) {
+                        //队列为空，说明已经将所有数据发送完成，将pending设置为false，这样后续要发送数据时可以继续发送
+                        _current_block.clear();
+                        _pending = false;
+                        _bytes_sent = 0;
+                        return;
+                    }
+
+                    //队列不为空，则取出队首元素
+                    _current_block = _send_queue.dequeue();
+                    _bytes_sent = 0;
+                    _pending = true;
+                    qint64 w2 = _socket.write(_current_block);
+                    qDebug() << "[TcpMgr] Dequeued and write() returned" << w2;
+            });
+
+
+        //关闭socket
+        connect(this, &TcpMgr::sig_close, this, &TcpMgr::slot_tcp_close);
         //注册消息
         initHandlers();
+
+}
+
+void TcpMgr::registerMetaType() {
+    // 注册所有自定义类型
+    qRegisterMetaType<ServerInfo>("ServerInfo");
+    qRegisterMetaType<SearchInfo>("SearchInfo");
+    qRegisterMetaType<std::shared_ptr<SearchInfo>>("std::shared_ptr<SearchInfo>");
+
+    qRegisterMetaType<AddFriendApply>("AddFriendApply");
+    qRegisterMetaType<std::shared_ptr<AddFriendApply>>("std::shared_ptr<AddFriendApply>");
+
+    qRegisterMetaType<ApplyInfo>("ApplyInfo");
+
+    qRegisterMetaType<std::shared_ptr<AuthInfo>>("std::shared_ptr<AuthInfo>");
+
+    qRegisterMetaType<AuthRsp>("AuthRsp");
+    qRegisterMetaType<std::shared_ptr<AuthRsp>>("std::shared_ptr<AuthRsp>");
+
+    qRegisterMetaType<UserInfo>("UserInfo");
+
+    qRegisterMetaType<std::vector<std::shared_ptr<TextChatData>>>("std::vector<std::shared_ptr<TextChatData>>");
+
+    qRegisterMetaType<std::vector<std::shared_ptr<ChatThreadInfo>>>("std::vector<std::shared_ptr<ChatThreadInfo>>");
+
+    qRegisterMetaType<std::shared_ptr<ChatThreadData>>("std::shared_ptr<ChatThreadData>");
+    qRegisterMetaType<ReqId>("ReqId");
+    qRegisterMetaType<std::shared_ptr<ImgChatData>>("std::shared_ptr<ImgChatData>");
+    qRegisterMetaType<std::vector<std::shared_ptr<ChatDataBase>>>("std::vector<std::shared_ptr<ChatDataBase>>");
 }
 
 void TcpMgr::CloseConnection(){
-    _socket.close();
+    emit sig_close();
 }
+
+void TcpMgr::SendData(ReqId reqId, QByteArray data)
+{
+    emit sig_send_data(reqId, data);
+}
+
+
 
 TcpMgr::~TcpMgr(){
 
 }
+
 void TcpMgr::initHandlers()
 {
     //auto self = shared_from_this();
@@ -251,6 +322,7 @@ void TcpMgr::initHandlers()
         if (jsonDoc.isNull()) {
             qDebug() << "Failed to create QJsonDocument.";
             return;
+
         }
 
         QJsonObject jsonObj = jsonDoc.object();
@@ -656,7 +728,7 @@ void TcpMgr::initHandlers()
         int last_msg_id = jsonObj["last_message_id"].toInt();
         bool load_more = jsonObj["load_more"].toBool();
 
-        std::vector<std::shared_ptr<TextChatData>> chat_datas;
+        std::vector<std::shared_ptr<ChatDataBase>> chat_datas;
         for (const QJsonValue& data : jsonObj["chat_datas"].toArray()) {
             auto send_uid = data["sender"].toInt();
             auto msg_id = data["msg_id"].toInt();
@@ -665,14 +737,283 @@ void TcpMgr::initHandlers()
             auto msg_content = data["msg_content"].toString();
             QString chat_time = data["chat_time"].toString();
             int status = data["status"].toInt();
-            auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
-                ChatMsgType::TEXT, msg_content, send_uid, status,chat_time);
-            chat_datas.push_back(chat_data);
+            int msg_type = data["msg_type"].toInt();
+            int recv_id = data["receiver"].toInt();
+            if (msg_type == int(ChatMsgType::TEXT)) {
+                auto chat_data = std::make_shared<TextChatData>(msg_id, thread_id, ChatFormType::PRIVATE,
+                    ChatMsgType::TEXT, msg_content, send_uid, status, chat_time);
+                    chat_datas.push_back(chat_data);
+                    continue;
+            }
+            
+            if (msg_type == int(ChatMsgType::PIC)) {
+                auto uid = UserMgr::GetInstance()->GetUid();
+                QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+                QString img_path_str = storageDir + "/user/" + QString::number(uid) + "/chatimg/" + QString::number(send_uid);
+                QString img_path = img_path_str + "/" + msg_content;
+                //文件不存在，则创建空白图片占位，同时组织数据准备发送
+                if (QFile::exists(img_path) == false) {
+                    
+                    CreatePlaceholderImgMsgL(img_path_str, msg_content,
+                        msg_id, thread_id, send_uid, recv_id, status, chat_time,
+                        chat_datas);
+                    continue;
+                }
+                //如果文件存在
+                //如果文件存在则直接构建MsgInfo
+                // 获取文件大小
+                QFileInfo fileInfo(img_path);
+                qint64 file_size = fileInfo.size();
+                //从文件路径加载QPixmap
+                QPixmap pixmap(img_path);
+                //如果图片加载失败，也是创建占位符，然后组织发送
+                if (pixmap.isNull()) {
+                    CreatePlaceholderImgMsgL(img_path_str, msg_content,
+                        msg_id, thread_id, send_uid, recv_id, status, chat_time,
+                        chat_datas);
+                        continue;
+                }
+
+                //说明图片加载正确，构建真实图片
+                auto  file_info = std::make_shared<MsgInfo>(MsgType::IMG_MSG, img_path_str,
+                    pixmap, msg_content, file_size, "");
+                file_info->_msg_id = msg_id;
+                file_info->_sender = send_uid;
+                file_info->_receiver = recv_id;
+                file_info->_thread_id = thread_id;
+                //设置文件传输的类型
+                file_info->_transfer_type = TransferType::Download;
+                //设置文件传输状态
+                file_info->_transfer_state = TransferState::None;
+                //放入chat_datas列表
+                auto chat_data = std::make_shared<ImgChatData>(file_info,"", thread_id, ChatFormType::PRIVATE,
+                    ChatMsgType::PIC, send_uid, status, chat_time);
+                chat_datas.push_back(chat_data);
+                continue;
+            }          
         }
 
         //发送信号通知界面
         emit sig_load_chat_msg(thread_id, last_msg_id, load_more, chat_datas);
         });
+
+    _handlers.insert(ID_IMG_CHAT_MSG_RSP, [this](ReqId id, int len, QByteArray data) {
+        Q_UNUSED(len);
+        qDebug() << "handle id is " << id << " data is " << data;
+        // 将QByteArray转换为QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+        // 检查转换是否成功
+        if (jsonDoc.isNull()) {
+            qDebug() << "Failed to create QJsonDocument.";
+            return;
+        }
+
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (!jsonObj.contains("error")) {
+            int err = ErrorCodes::ERR_JSON;
+            qDebug() << "parse create private chat json parse failed " << err;
+            return;
+        }
+
+        int err = jsonObj["error"].toInt();
+        if (err != ErrorCodes::SUCCESS) {
+            qDebug() << "get create private chat failed, error is " << err;
+            return;
+        }
+
+        qDebug() << "Receive create private chat rsp Success";
+
+        //收到消息后转发给页面
+        auto thread_id = jsonObj["thread_id"].toInt();
+        auto unique_id = jsonObj["unique_id"].toString();
+        auto unique_name = jsonObj["unique_name"].toString();
+        
+        auto sender = jsonObj["fromuid"].toInt();
+        auto msg_id = jsonObj["message_id"].toInt();
+        QString chat_time = jsonObj["chat_time"].toString();
+        int status = jsonObj["status"].toInt();
+        auto text_or_url = jsonObj["text_or_url"].toString();
+        auto receiver = jsonObj["touid"].toInt();
+
+        auto file_info = UserMgr::GetInstance()->GetTransFileByName(unique_name);
+        //如果未找到文件对应的信息则返回
+        if (!file_info) {
+            return;
+        }
+        //设置消息id和会话id
+        file_info->_msg_id = msg_id;
+        file_info->_thread_id = thread_id;
+        //设置发送者和接收者
+        file_info->_sender = sender;
+        file_info->_receiver = receiver;
+        //设置文件传输的类型
+        file_info->_transfer_type = TransferType::Upload;
+        //设置文件传输状态
+        file_info->_transfer_state = TransferState::Uploading;
+ 
+        auto chat_data = std::make_shared<ImgChatData>(file_info, unique_id, thread_id, ChatFormType::PRIVATE,
+            ChatMsgType::PIC, sender, status, chat_time);
+
+        //更新msg_id,因为最开始构造的chat_dat中ImgChatData的msg_id为空
+        chat_data->SetMsgId(msg_id);
+
+        //发送信号通知界面
+        emit sig_chat_img_rsp(thread_id, chat_data);
+
+        //管理消息，添加序列号到正在发送集合
+        file_info->_flighting_seqs.insert(file_info->_seq);
+        
+        //发送消息
+        QFile file(file_info->_text_or_url);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Could not open file:" << file.errorString();
+            return;
+        }
+        
+        file.seek(file_info->_current_size);
+        auto buffer = file.read(MAX_FILE_LEN);
+        qDebug() << "buffer is " << buffer;
+        //将文件内容转换为base64编码
+        QString base64Data = buffer.toBase64();
+        QJsonObject file_obj;
+        file_obj["name"] = file_info->_unique_name;
+        file_obj["unique_id"] = unique_id;
+        file_obj["seq"] = file_info->_seq;
+        file_info->_current_size = buffer.size() + (file_info->_seq - 1) * MAX_FILE_LEN;
+        file_obj["trans_size"] = QString::number(file_info->_current_size);
+        file_obj["total_size"] = QString::number(file_info->_total_size);
+        file_obj["token"] = UserMgr::GetInstance()->GetToken();
+        file_obj["md5"] = file_info->_md5;
+        file_obj["uid"] = UserMgr::GetInstance()->GetUid();
+        file_obj["data"] = base64Data;
+        file_obj["message_id"] = msg_id;
+        file_obj["receiver"] = receiver;
+        file_obj["sender"] = sender;
+
+        if (buffer.size() + (file_info->_seq - 1) * MAX_FILE_LEN >= file_info->_total_size) {
+            file_obj["last"] = 1;
+        }
+        else {
+            file_obj["last"] = 0;
+        }
+
+        //发送文件  todo 留作以后收到服务器返回消息后再发送
+		QJsonDocument doc_file(file_obj);
+		QByteArray fileData = doc_file.toJson(QJsonDocument::Compact);
+
+        //发送消息给ResourceServer
+        FileTcpMgr::GetInstance()->SendData(ReqId::ID_FILE_INFO_SYNC_REQ, fileData);
+
+        });
+
+    
+     _handlers.insert(ID_NOTIFY_IMG_CHAT_MSG_REQ, [this](ReqId id, int len, QByteArray data) {
+         Q_UNUSED(len);
+         qDebug() << "handle id is " << id << " data is " << data;
+         // 将QByteArray转换为QJsonDocument
+         QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+
+         // 检查转换是否成功
+         if (jsonDoc.isNull()) {
+             qDebug() << "Failed to create QJsonDocument.";
+             return;
+         }
+
+         QJsonObject jsonObj = jsonDoc.object();
+         qDebug() << "receive notify img chat msg req success" ;
+
+
+         //收到消息后转发给页面
+         auto thread_id = jsonObj["thread_id"].toInt();
+         auto sender_id = jsonObj["sender_id"].toInt();
+         auto message_id = jsonObj["message_id"].toInt();
+         auto receiver_id = jsonObj["receiver_id"].toInt();
+         auto img_name = jsonObj["img_name"].toString();
+         auto total_size_str = jsonObj["total_size"].toString();
+         auto total_size = total_size_str.toLongLong();
+         auto uid = UserMgr::GetInstance()->GetUid();
+         //客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+         QString storageDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+         QString img_path_str = storageDir +"/user/"+ QString::number(uid)+ "/chatimg/" + QString::number(sender_id);
+         auto file_info = UserMgr::GetInstance()->GetTransFileByName(img_name);
+         //正常情况是找不到的，所以这里初始化一个文件信息放入UserMgr中管理
+         if (!file_info) {
+             //预览图先默认空白，md5为空
+             file_info = std::make_shared<MsgInfo>(MsgType::IMG_MSG, img_path_str, CreateLoadingPlaceholder(200, 200), img_name, total_size, "");
+             UserMgr::GetInstance()->AddTransFile(img_name, file_info);
+         }
+
+         file_info->_msg_id = message_id;
+         file_info->_sender = sender_id;
+         file_info->_receiver = receiver_id;
+         file_info->_thread_id = thread_id;
+         //设置文件传输的类型
+         file_info->_transfer_type = TransferType::Download;
+         //设置文件传输状态
+         file_info->_transfer_state = TransferState::Downloading;
+
+         auto img_chat_data_ptr = std::make_shared<ImgChatData>(file_info, "",
+             thread_id, ChatFormType::PRIVATE, ChatMsgType::PIC,
+             sender_id, MsgStatus::READED);
+
+         //发送给界面显示
+         emit sig_img_chat_msg(img_chat_data_ptr);
+
+         //组织请求，准备下载
+         QJsonObject jsonObj_send;
+         jsonObj_send["name"] = img_name;
+         jsonObj_send["seq"] = file_info->_seq;
+         jsonObj_send["trans_size"] = "0";
+         jsonObj_send["total_size"] = QString::number(file_info->_total_size);
+         jsonObj_send["token"] = UserMgr::GetInstance()->GetToken();
+         jsonObj_send["sender_id"] = sender_id;
+         jsonObj_send["receiver_id"] = receiver_id;
+         jsonObj_send["message_id"] = message_id;
+         jsonObj_send["uid"] = uid;
+         //客户端存储聊天记录，按照如下格式存储C:\Users\secon\AppData\Roaming\llfcchat\chatimg\uid, uid为对方uid
+         QDir chatimgDir(img_path_str);
+         jsonObj["client_path"] = img_path_str;
+         if (!chatimgDir.exists()) {
+             chatimgDir.mkpath(".");  // 创建当前路径
+         }
+
+         QJsonDocument doc(jsonObj_send);
+         auto send_data = doc.toJson();
+         FileTcpMgr::GetInstance()->SendData(ID_IMG_CHAT_DOWN_REQ, send_data);
+     });
+    
+}
+
+void TcpMgr::CreatePlaceholderImgMsgL(QString img_path_str, QString msg_content, 
+    int msg_id, int thread_id, int send_uid, int recv_id, int status, QString chat_time,
+    std::vector<std::shared_ptr<ChatDataBase>> &chat_datas) {
+    //如果加载失败，则使用占位符使图片变为空白，并且md5为空
+    auto  file_info = std::make_shared<MsgInfo>(MsgType::IMG_MSG, img_path_str,
+        CreateLoadingPlaceholder(200, 200), msg_content, 0, "");
+    file_info->_msg_id = msg_id;
+    file_info->_sender = send_uid;
+    file_info->_receiver = recv_id;
+    file_info->_thread_id = thread_id;
+    //设置文件传输的类型
+    file_info->_transfer_type = TransferType::Download;
+    //设置文件传输状态
+    file_info->_transfer_state = TransferState::Downloading;
+    file_info->_rsp_size = file_info->_current_size;
+    //放入chat_datas列表
+    auto chat_data = std::make_shared<ImgChatData>(file_info, "", thread_id, ChatFormType::PRIVATE,
+        ChatMsgType::PIC, send_uid, status, chat_time);
+    chat_datas.push_back(chat_data);
+    //加入下载列表，并且发送下载请求
+    UserMgr::GetInstance()->AddTransFile(msg_content, file_info);
+ 
+    QJsonObject jsonObj_send;
+    jsonObj_send["message_id"] = file_info->_msg_id;
+    QJsonDocument doc(jsonObj_send);
+    auto send_data = doc.toJson();
+    // 从服务器获取文件大小，然后请求下载
+    FileTcpMgr::GetInstance()->SendData(ID_IMG_CHAT_DOWN_INFO_SYNC_REQ, send_data);
 }
 
 void TcpMgr::handleMsg(ReqId id, int len, QByteArray data)
@@ -686,14 +1027,18 @@ void TcpMgr::handleMsg(ReqId id, int len, QByteArray data)
    find_iter.value()(id,len,data);
 }
 
-void TcpMgr::slot_tcp_connect(ServerInfo si)
+void TcpMgr::slot_tcp_close() {
+    _socket.close();
+}
+
+void TcpMgr::slot_tcp_connect(std::shared_ptr<ServerInfo> si)
 {
     qDebug()<< "receive tcp connect signal";
     // 尝试连接到服务器
-    qDebug() << "Connecting to server...";
-    _host = si.Host;
-    _port = static_cast<uint16_t>(si.Port.toUInt());
-    _socket.connectToHost(si.Host, _port);
+    qDebug() << "Connecting to chat server...";
+    _host = si->_chat_host;
+    _port = static_cast<uint16_t>(si->_chat_port.toUInt());
+    _socket.connectToHost(_host, _port);
 }
 
 void TcpMgr::slot_send_data(ReqId reqId, QByteArray dataBytes)
@@ -716,9 +1061,33 @@ void TcpMgr::slot_send_data(ReqId reqId, QByteArray dataBytes)
     // 添加字符串数据
     block.append(dataBytes);
 
-    // 发送数据
-    _socket.write(block);
-    qDebug() << "tcp mgr send byte data is " << block ;
+    //判断是否正在发送
+    if (_pending) {
+        //放入队列直接返回，因为目前有数据正在发送
+        _send_queue.enqueue(block);
+        return;
+    }
+
+    // 没有正在发送，把这包设为“当前块”，重置计数，并写出去
+    _current_block = block;        // ← 保存当前正在发送的 block
+    _bytes_sent = 0;            // ← 归零
+    _pending = true;         // ← 标记正在发送
+
+    qint64 written = _socket.write(_current_block);
+   /* qDebug() << "tcp mgr send byte data is" << _current_block
+        << ", write() returned" << written;*/
 }
 
+TcpThread::TcpThread()
+{
+    _tcp_thread = new QThread();
+    TcpMgr::GetInstance()->moveToThread(_tcp_thread);
+    QObject::connect(_tcp_thread, &QThread::finished, _tcp_thread, &QObject::deleteLater);
 
+    _tcp_thread->start();
+}
+
+TcpThread::~TcpThread()
+{
+    _tcp_thread->quit();
+}

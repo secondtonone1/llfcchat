@@ -4,6 +4,7 @@
 #include <QWidget>
 #include "listitembase.h"
 #include "userdata.h"
+#include <QLabel>
 namespace Ui {
 class ChatUserWid;
 }
@@ -20,6 +21,7 @@ public:
     std::shared_ptr<ChatThreadData> GetChatData();
     void ShowRedPoint(bool bshow);
     void updateLastMsg(std::vector<std::shared_ptr<TextChatData>> msgs);
+    void LoadHeadIcon(QString avatarPath, QLabel* icon_label, QString file_name, QString req_type);
 private:
     Ui::ChatUserWid *ui;
     std::shared_ptr<ChatThreadData> _chat_data;

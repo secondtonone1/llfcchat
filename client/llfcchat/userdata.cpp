@@ -1,4 +1,6 @@
-#include "userdata.h"
+﻿#include "userdata.h"
+#include <memory>
+
 SearchInfo::SearchInfo(int uid, QString name,
     QString nick, QString desc, int sex, QString icon):_uid(uid)
   ,_name(name), _nick(nick),_desc(desc),_sex(sex),_icon(icon){
@@ -60,9 +62,23 @@ void ChatThreadData::MoveMsg(std::shared_ptr<ChatDataBase> msg) {
     }
    
     iter.value()->SetMsgId(msg->GetMsgId());
-    iter.value()->SetStatus(2);
+    iter.value()->SetStatus(msg->GetStatus());
     AddMsg(iter.value());
     _msg_unrsp_map.erase(iter);
+}
+
+void ChatThreadData::UpdateProgress(std::shared_ptr<MsgInfo> msg) {
+    auto iter = _msg_map.find(msg->_msg_id);
+    if (iter == _msg_map.end()) {
+        return;
+    }
+
+    //更新进度信息,根据消息类型转化为具体类型
+    if (msg->_msg_type == MsgType::IMG_MSG) {
+        auto img_chat_data = std::dynamic_pointer_cast<ImgChatData>(iter.value());
+        img_chat_data->_msg_info->_rsp_size = msg->_rsp_size;
+        img_chat_data->_msg_info->_current_size = msg->_current_size;
+    }
 }
 
 void ChatThreadData::SetLastMsgId(int msg_id)
@@ -134,4 +150,13 @@ void AuthInfo::SetChatDatas(std::vector<std::shared_ptr<TextChatData>> chat_data
 void AuthRsp::SetChatDatas(std::vector<std::shared_ptr<TextChatData>> chat_datas) {
     _chat_datas = chat_datas;
     _thread_id = _chat_datas[0]->GetThreadId();
+}
+
+std::shared_ptr<ChatDataBase> ChatThreadData::GetChatDataBase(int msg_id) {
+    auto iter = _msg_map.find(msg_id);
+    if (iter == _msg_map.end()) {
+        return nullptr;
+    }
+
+    return iter.value();
 }

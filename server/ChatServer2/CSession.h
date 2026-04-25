@@ -10,6 +10,9 @@
 #include <memory>
 #include "const.h"
 #include "MsgNode.h"
+#include "message.grpc.pb.h"
+#include "message.pb.h"
+#include <grpcpp/grpcpp.h>
 using namespace std;
 
 
@@ -17,7 +20,7 @@ namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-
+using message::NotifyChatImgReq;
 
 class CServer;
 class LogicSystem;
@@ -39,6 +42,7 @@ public:
 	void AsyncReadBody(int length);
 	void AsyncReadHead(int total_len);
 	void NotifyOffline(int uid);
+	void NotifyChatImgRecv(const ::message::NotifyChatImgReq* request);
 	//判断心跳是否过期
 	bool IsHeartbeatExpired(std::time_t& now);
 	//更新心跳

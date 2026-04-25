@@ -1,4 +1,4 @@
-#ifndef APPLYFRIEND_H
+ï»¿#ifndef APPLYFRIEND_H
 #define APPLYFRIEND_H
 
 #include <QDialog>
@@ -23,11 +23,11 @@ public:
 private:
     void resetLabels();
     Ui::ApplyFriend *ui;
-    //ÒÑ¾­´´½¨ºÃµÄ±êÇ©
+    //å·²ç»åˆ›å»ºå¥½çš„æ ‡ç­¾
     QMap<QString, ClickedLabel*> _add_labels;
     std::vector<QString> _add_label_keys;
     QPoint _label_point;
-    //ÓÃÀ´ÔÚÊäÈë¿òÏÔÊ¾Ìí¼ÓĞÂºÃÓÑµÄ±êÇ©
+    //ç”¨æ¥åœ¨è¾“å…¥æ¡†æ˜¾ç¤ºæ·»åŠ æ–°å¥½å‹çš„æ ‡ç­¾
     QMap<QString, FriendLabel*> _friend_labels;
     std::vector<QString> _friend_label_keys;
     void addLabel(QString name);
@@ -35,23 +35,23 @@ private:
     QPoint _tip_cur_point;
     std::shared_ptr<SearchInfo> _si;
 public slots:
-    //ÏÔÊ¾¸ü¶àlabel±êÇ©
+    //æ˜¾ç¤ºæ›´å¤šlabelæ ‡ç­¾
     void ShowMoreLabel();
-    //ÊäÈëlabel°´ÏÂ»Ø³µ´¥·¢½«±êÇ©¼ÓÈëÕ¹Ê¾À¸
+    //è¾“å…¥labelæŒ‰ä¸‹å›è½¦è§¦å‘å°†æ ‡ç­¾åŠ å…¥å±•ç¤ºæ 
     void SlotLabelEnter();
-    //µã»÷¹Ø±Õ£¬ÒÆ³ıÕ¹Ê¾À¸ºÃÓÑ±ãÇ©
+    //ç‚¹å‡»å…³é—­ï¼Œç§»é™¤å±•ç¤ºæ å¥½å‹ä¾¿ç­¾
     void SlotRemoveFriendLabel(QString);
-    //Í¨¹ıµã»÷tipÊµÏÖÔö¼ÓºÍ¼õÉÙºÃÓÑ±ãÇ©
+    //é€šè¿‡ç‚¹å‡»tipå®ç°å¢åŠ å’Œå‡å°‘å¥½å‹ä¾¿ç­¾
     void SlotChangeFriendLabelByTip(QString, ClickLbState);
-    //ÊäÈë¿òÎÄ±¾±ä»¯ÏÔÊ¾²»Í¬ÌáÊ¾
+    //è¾“å…¥æ¡†æ–‡æœ¬å˜åŒ–æ˜¾ç¤ºä¸åŒæç¤º
     void SlotLabelTextChange(const QString& text);
-    //ÊäÈë¿òÊäÈëÍê³É
+    //è¾“å…¥æ¡†è¾“å…¥å®Œæˆ
     void SlotLabelEditFinished();
-   //ÊäÈë±êÇ©ÏÔÊ¾ÌáÊ¾¿ò£¬µã»÷ÌáÊ¾¿òÄÚÈİºóÌí¼ÓºÃÓÑ±ãÇ©
+   //è¾“å…¥æ ‡ç­¾æ˜¾ç¤ºæç¤ºæ¡†ï¼Œç‚¹å‡»æç¤ºæ¡†å†…å®¹åæ·»åŠ å¥½å‹ä¾¿ç­¾
     void SlotAddFirendLabelByClickTip(QString text);
-    //´¦ÀíÈ·ÈÏ»Øµ÷
+    //å¤„ç†ç¡®è®¤å›è°ƒ
     void SlotApplySure();
-    //´¦ÀíÈ¡Ïû»Øµ÷
+    //å¤„ç†å–æ¶ˆå›è°ƒ
     void SlotApplyCancel();
 };
 

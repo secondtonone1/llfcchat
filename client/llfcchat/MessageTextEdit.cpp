@@ -1,7 +1,7 @@
 ﻿#include "MessageTextEdit.h"
 #include <QDebug>
 #include <QMessageBox>
-
+#include "global.h"
 
 MessageTextEdit::MessageTextEdit(QWidget *parent)
     : QTextEdit(parent)
@@ -19,15 +19,14 @@ MessageTextEdit::~MessageTextEdit()
 
 }
 
-QVector<MsgInfo> MessageTextEdit::getMsgList()
+QVector<std::shared_ptr<MsgInfo>> MessageTextEdit::getMsgList()
 {
-    mGetMsgList.clear();
-
+    _total_msg_list.clear();
     QString doc = this->document()->toPlainText();
     QString text="";//存储文本信息
     int indexUrl = 0;
     //这个是存储的富文本信息，包括图片的url以及文件的url
-    int count = mMsgList.size();
+    int count = _img_or_file_list.size();
 
     for(int index=0; index<doc.size(); index++)
     {
@@ -36,17 +35,16 @@ QVector<MsgInfo> MessageTextEdit::getMsgList()
         {
             if(!text.isEmpty())
             {
-                QPixmap pix;
-                insertMsgList(mGetMsgList,"text",text,pix);
+                insertMsgList(_total_msg_list, MsgType::TEXT_MSG, text, QPixmap(),"",0,"");
                 text.clear();
             }
             while(indexUrl<count)
             {
-                MsgInfo msg =  mMsgList[indexUrl];
-                if(this->document()->toHtml().contains(msg.content,Qt::CaseSensitive))
+                std::shared_ptr<MsgInfo> msg = _img_or_file_list[indexUrl];
+                if(this->document()->toHtml().contains(msg->_text_or_url,Qt::CaseSensitive))
                 {
                     indexUrl++;
-                    mGetMsgList.append(msg);
+                    _total_msg_list.append(msg);
                     break;
                 }
                 indexUrl++;
@@ -60,13 +58,12 @@ QVector<MsgInfo> MessageTextEdit::getMsgList()
     }
     if(!text.isEmpty())
     {
-        QPixmap pix;
-        insertMsgList(mGetMsgList,"text",text,pix);
+        insertMsgList(_total_msg_list, MsgType::TEXT_MSG, text, QPixmap(), "", 0, "");
         text.clear();
     }
-    mMsgList.clear();
+    _img_or_file_list.clear();
     this->clear();
-    return mGetMsgList;
+    return _total_msg_list;
 }
 
 void MessageTextEdit::dragEnterEvent(QDragEnterEvent *event)
@@ -102,12 +99,40 @@ void MessageTextEdit::insertFileFromUrl(const QStringList &urls)
          if(isImage(url))
              insertImages(url);
          else
-             insertTextFile(url);
+             insertFiles(url);
     }
 }
 
 void MessageTextEdit::insertImages(const QString &url)
 {
+    //文件信息
+    QFileInfo  fileInfo(url);
+    if (fileInfo.isDir())
+    {
+        QMessageBox::information(this, "提示", "只允许拖拽单个文件!");
+        return;
+    }
+
+    auto total_size = fileInfo.size();
+    
+    qint64 max_size = qint64(2) * 1024 * 1024 * 1024;
+
+    if (total_size > max_size)
+    {
+        QMessageBox::information(this, "提示", "发送的文件大小不能大于2G");
+        return;
+    }
+
+    // 计算文件MD5
+    QString fileMd5 = calculateFileHash(url);
+
+    if (fileMd5.isEmpty())
+    {
+        QMessageBox::warning(this, "错误", "无法计算文件MD5");
+        return;
+    }
+
+
     QImage image(url);
     //按比例缩放图片
     if(image.width()>120||image.height()>80)
@@ -123,30 +148,50 @@ void MessageTextEdit::insertImages(const QString &url)
     // QTextDocument *document = this->document();
     // document->addResource(QTextDocument::ImageResource, QUrl(url), QVariant(image));
     cursor.insertImage(image,url);
-
-    insertMsgList(mMsgList,"image",url,QPixmap::fromImage(image));
+    QString origin_name = fileInfo.fileName();
+    QString unique_name = generateUniqueFileName(origin_name);
+    insertMsgList(_img_or_file_list, MsgType::IMG_MSG, url, QPixmap::fromImage(image), unique_name,
+        total_size, fileMd5); 
 }
 
-void MessageTextEdit::insertTextFile(const QString &url)
-{
+void MessageTextEdit::insertFiles(const QString& url) {
     QFileInfo fileInfo(url);
-    if(fileInfo.isDir())
+    if (fileInfo.isDir())
     {
-        QMessageBox::information(this,"提示","只允许拖拽单个文件!");
+        QMessageBox::information(this, "提示", "只允许拖拽单个文件!");
         return;
     }
 
-    if(fileInfo.size()>100*1024*1024)
+    auto total_size = fileInfo.size();
+
+    qint64 max_size = qint64(2) * 1024 * 1024 * 1024;
+
+    if (total_size > max_size)
     {
-        QMessageBox::information(this,"提示","发送的文件大小不能大于100M");
+        QMessageBox::information(this, "提示", "发送的文件大小不能大于100M");
+        return;
+    }
+
+    // 计算文件MD5
+    QString fileMd5 = calculateFileHash(url);
+
+    if (fileMd5.isEmpty())
+    {
+        QMessageBox::warning(this, "错误", "无法计算文件MD5");
         return;
     }
 
     QPixmap pix = getFileIconPixmap(url);
     QTextCursor cursor = this->textCursor();
-    cursor.insertImage(pix.toImage(),url);
-    insertMsgList(mMsgList,"file",url,pix);
+    cursor.insertImage(pix.toImage(), url);
+
+    QString origin_name = fileInfo.fileName();
+    QString unique_name = generateUniqueFileName(origin_name);
+    insertMsgList(_img_or_file_list, MsgType::FILE_MSG, url, pix, unique_name,
+        total_size, fileMd5);
 }
+
+
 
 bool MessageTextEdit::canInsertFromMimeData(const QMimeData *source) const
 {
@@ -165,7 +210,7 @@ void MessageTextEdit::insertFromMimeData(const QMimeData *source)
          if(isImage(url))
              insertImages(url);
          else
-             insertTextFile(url);
+             insertFiles(url);
     }
 }
 
@@ -181,14 +226,16 @@ bool MessageTextEdit::isImage(QString url)
     return false;
 }
 
-void MessageTextEdit::insertMsgList(QVector<MsgInfo> &list, QString flag, QString text, QPixmap pix)
-{
-    MsgInfo msg;
-    msg.msgFlag=flag;
-    msg.content = text;
-    msg.pixmap = pix;
-    list.append(msg);
+void MessageTextEdit::insertMsgList(QVector<std::shared_ptr<MsgInfo>> &list, MsgType msgtype,
+    QString text_or_url, QPixmap preview_pix,
+    QString unique_name, uint64_t total_size, QString md5) {
+
+    auto msg_info = std::make_shared<MsgInfo>(msgtype, text_or_url, preview_pix, unique_name, total_size, md5);
+    list.append(msg_info);
+
 }
+
+
 
 QStringList MessageTextEdit::getUrl(QString text)
 {

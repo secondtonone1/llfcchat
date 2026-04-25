@@ -215,3 +215,27 @@ void ChatServiceImpl::RegisterServer(std::shared_ptr<CServer> pServer)
 {
 	_p_server = pServer;
 }
+
+Status ChatServiceImpl::NotifyChatImgMsg(::grpc::ServerContext* context, const ::message::NotifyChatImgReq* request, ::message::NotifyChatImgRsp* response)
+{
+	//查找用户是否在本服务器
+	auto uid = request->to_uid();
+	auto session = UserMgr::GetInstance()->GetSession(uid);
+
+	Defer defer([request, response]() {
+		//设置具体的回包信息
+		response->set_error(ErrorCodes::Success);
+		response->set_message_id(request->message_id());
+		});
+
+	//用户不在内存中则直接返回
+	if (session == nullptr) {
+		//这里只是返回1个状态
+		return Status::OK;
+	}
+
+	//在内存中则直接发送通知对方
+	session->NotifyChatImgRecv(request);
+	//这里只是返回1个状态
+	return Status::OK;
+}

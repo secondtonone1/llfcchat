@@ -1,4 +1,4 @@
-#ifndef USERDATA_H
+ï»¿#ifndef USERDATA_H
 #define USERDATA_H
 #include <QString>
 #include <memory>
@@ -11,6 +11,7 @@
 class SearchInfo {
 public:
     SearchInfo(int uid, QString name, QString nick, QString desc, int sex, QString icon);
+    SearchInfo() = default;
 	int _uid;
 	QString _name;
 	QString _nick;
@@ -19,10 +20,14 @@ public:
     QString _icon;
 };
 
+Q_DECLARE_METATYPE(SearchInfo)
+Q_DECLARE_METATYPE(std::shared_ptr<SearchInfo>)
+
 class AddFriendApply {
 public:
     AddFriendApply(int from_uid, QString name, QString desc,
                    QString icon, QString nick, int sex);
+    AddFriendApply() = default;
 	int _from_uid;
 	QString _name;
 	QString _desc;
@@ -31,7 +36,10 @@ public:
     int     _sex;
 };
 
+Q_DECLARE_METATYPE(std::shared_ptr<AddFriendApply>)
+
 struct ApplyInfo {
+    ApplyInfo() = default;
     ApplyInfo(int uid, QString name, QString desc,
         QString icon, QString nick, int sex, int status)
         :_uid(uid),_name(name),_desc(desc),
@@ -61,7 +69,7 @@ struct AuthInfo {
              QString nick, QString icon, int sex):
         _uid(uid), _name(name), _nick(nick), _icon(icon),
         _sex(sex), _thread_id(0){}
-
+    AuthInfo() = default;
     void SetChatDatas(std::vector<std::shared_ptr<TextChatData>> _chat_datas);
     int _uid;
     QString _name;
@@ -72,7 +80,10 @@ struct AuthInfo {
     std::vector<std::shared_ptr<TextChatData>> _chat_datas;
 };
 
+Q_DECLARE_METATYPE(std::shared_ptr<AuthInfo>)
+
 struct AuthRsp {
+    AuthRsp() = default;
     AuthRsp(int peer_uid, QString peer_name,
             QString peer_nick, QString peer_icon, int peer_sex)
         :_uid(peer_uid),_name(peer_name),_nick(peer_nick),
@@ -91,6 +102,8 @@ struct AuthRsp {
     int _thread_id;
     std::vector<std::shared_ptr<TextChatData>> _chat_datas;
 };
+
+Q_DECLARE_METATYPE(std::shared_ptr<AuthRsp>)
 
 struct UserInfo {
     UserInfo(int uid, QString name, QString nick, QString icon, int sex, QString last_msg = "", QString desc=""):
@@ -116,6 +129,8 @@ struct UserInfo {
 
     }
 
+    UserInfo() = default;
+
     int _uid;
     QString _name;
     QString _nick;
@@ -124,8 +139,11 @@ struct UserInfo {
     QString _desc;
 };
 
+Q_DECLARE_METATYPE(std::shared_ptr<UserInfo>)
+
 class ChatDataBase {
 public:
+    ChatDataBase() = default;
     ChatDataBase(int msg_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,
         QString content,int _send_uid, int status, QString chat_time );
     ChatDataBase(QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type,
@@ -144,25 +162,28 @@ public:
     int GetStatus() { return _status; }
     void SetMsgId(int msg_id) { _msg_id = msg_id; }
     void SetStatus(int status) { _status = status; }
-private:
-    //¿Í»§¶Ë±¾µØÎ¨Ò»±êÊ¶
+    virtual ~ChatDataBase() {}  // æ·»åŠ è™šææ„å‡½æ•°
+protected:
+    //å®¢æˆ·ç«¯æœ¬åœ°å”¯ä¸€æ ‡è¯†
     QString _unique_id;
-    //ÏûÏ¢id
+    //æ¶ˆæ¯id
     int _msg_id;
-    //»á»°id
+    //ä¼šè¯id
     int _thread_id;
-    //ÈºÁÄ»¹ÊÇË½ÁÄ
+    //ç¾¤èŠè¿˜æ˜¯ç§èŠ
     ChatFormType _form_type;
-    //ÎÄ±¾ĞÅÏ¢Îª0£¬Í¼Æ¬Îª1£¬ÎÄ¼şÎª2
+    //æ–‡æœ¬ä¿¡æ¯ä¸º0ï¼Œå›¾ç‰‡ä¸º1ï¼Œæ–‡ä»¶ä¸º2
     ChatMsgType _msg_type;
     QString _content;
-    //·¢ËÍÕßid
+    //å‘é€è€…id
     int _send_uid;
-    //×´Ì¬
+    //çŠ¶æ€
     int _status;
-    //ÁÄÌìÊ±¼ä
+    //èŠå¤©æ—¶é—´
     QString _chat_time;
 };
+
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<ChatDataBase>>)
 
 class TextChatData : public ChatDataBase {
 public:
@@ -183,28 +204,55 @@ public:
 
     TextChatData(int msg_id, QString unique_id, int thread_id, ChatFormType form_type, ChatMsgType msg_type, QString content,
         int send_uid, int status, QString chat_time = "") :
-        ChatDataBase(unique_id, thread_id, form_type, msg_type, content, send_uid, status, chat_time)
+        ChatDataBase(msg_id, unique_id, thread_id, form_type, msg_type, content, send_uid, status, chat_time)
     {
 
     }
 
+    TextChatData() = default;
+
+    ~TextChatData() override{}
 };
 
-//ÁÄÌìÏß³ÌĞÅÏ¢
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<TextChatData>>)
+
+class ImgChatData : public ChatDataBase {
+public:
+    ImgChatData(std::shared_ptr<MsgInfo> msg_info, QString unique_id, 
+        int thread_id, ChatFormType form_type, ChatMsgType msg_type,
+        int send_uid, int status, QString chat_time = ""): 
+        ChatDataBase(unique_id,thread_id, form_type, msg_type, msg_info->_text_or_url,
+            send_uid, status, chat_time), _msg_info(msg_info){
+        _msg_id = _msg_info->_msg_id;
+    }
+   
+    ~ImgChatData() override {}
+
+    std::shared_ptr<MsgInfo> _msg_info;
+};
+
+Q_DECLARE_METATYPE(std::shared_ptr<ImgChatData>)
+
+//èŠå¤©çº¿ç¨‹ä¿¡æ¯
 struct ChatThreadInfo {
     int _thread_id;
     QString _type;     // "private" or "group"
-    int _user1_id;    // Ë½ÁÄÊ±¶ÔÓ¦ private_chat.user1_id£»ÈºÁÄÊ±ÉèÎª 0
-    int _user2_id;    // Ë½ÁÄÊ±¶ÔÓ¦ private_chat.user2_id£»ÈºÁÄÊ±ÉèÎª 0
+    int _user1_id;    // ç§èŠæ—¶å¯¹åº” private_chat.user1_idï¼›ç¾¤èŠæ—¶è®¾ä¸º 0
+    int _user2_id;    // ç§èŠæ—¶å¯¹åº” private_chat.user2_idï¼›ç¾¤èŠæ—¶è®¾ä¸º 0
+    ChatThreadInfo() = default;
 };
 
-//¿Í»§¶Ë±¾µØ´æ´¢µÄÁÄÌìÏß³ÌÊı¾İ½á¹¹
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<ChatThreadInfo>>)
+
+//å®¢æˆ·ç«¯æœ¬åœ°å­˜å‚¨çš„èŠå¤©çº¿ç¨‹æ•°æ®ç»“æ„
 class ChatThreadData {
 public:
+    ChatThreadData() = default;
     ChatThreadData(int other_id, int thread_id, int last_msg_id):
         _other_id(other_id), _thread_id(thread_id), _last_msg_id(last_msg_id){}
     void AddMsg(std::shared_ptr<ChatDataBase> msg);
     void MoveMsg(std::shared_ptr<ChatDataBase> msg);
+    void UpdateProgress(std::shared_ptr<MsgInfo> msg);
     void SetLastMsgId(int msg_id);
     void SetOtherId(int other_id);
     int  GetOtherId();
@@ -217,20 +265,21 @@ public:
     int GetLastMsgId();
     QMap<QString, std::shared_ptr<ChatDataBase>>& GetMsgUnRspRef();
     void AppendUnRspMsg(QString unique_id, std::shared_ptr<ChatDataBase> base_msg);
+    std::shared_ptr<ChatDataBase> GetChatDataBase(int msg_id);
 private:
-    //Èç¹ûÊÇË½ÁÄ£¬ÔòÎª¶Ô·½µÄid£»Èç¹ûÊÇÈºÁÄ£¬ÔòÎª0
+    //å¦‚æœæ˜¯ç§èŠï¼Œåˆ™ä¸ºå¯¹æ–¹çš„idï¼›å¦‚æœæ˜¯ç¾¤èŠï¼Œåˆ™ä¸º0
     int _other_id;
     int _last_msg_id;
     int _thread_id;
     QString _last_msg;
-    //ÈºÁÄĞÅÏ¢,³ÉÔ±ÁĞ±í
+    //ç¾¤èŠä¿¡æ¯,æˆå‘˜åˆ—è¡¨
     std::vector<int> _group_members;
-    //ÈºÁÄÃû³Æ
+    //ç¾¤èŠåç§°
     QString _group_name;
-    //»º´æÏûÏ¢map£¬³éÏóÎª»ùÀà£¬ÒòÎª»áÓĞÍ¼Æ¬µÈÆäËûÀàĞÍÏûÏ¢
+    //ç¼“å­˜æ¶ˆæ¯mapï¼ŒæŠ½è±¡ä¸ºåŸºç±»ï¼Œå› ä¸ºä¼šæœ‰å›¾ç‰‡ç­‰å…¶ä»–ç±»å‹æ¶ˆæ¯
     QMap<int, std::shared_ptr<ChatDataBase>>  _msg_map;
-    //»º´æÎ´»Ø¸´µÄÏûÏ¢
-        //ÒÑ·¢ËÍµÄÏûÏ¢£¬»¹Î´ÊÕµ½»ØÓ¦µÄ¡£
+    //ç¼“å­˜æœªå›å¤çš„æ¶ˆæ¯
+        //å·²å‘é€çš„æ¶ˆæ¯ï¼Œè¿˜æœªæ”¶åˆ°å›åº”çš„ã€‚
     QMap<QString, std::shared_ptr<ChatDataBase>> _msg_unrsp_map;
 };
 

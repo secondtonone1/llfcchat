@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebRTC 1v1 Room</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    input { padding: 8px; font-size: 14px; }
+    button { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+    .videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
+    video { width: 100%; background: #000; border-radius: 10px; }
+    .status { margin-top: 10px; color: #444; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eee; }
+  </style>
+</head>
+<body>
+  <h2>WebRTC 双人视频房间</h2>
+  <div>联系我微信1017234088,加入技术讨论群</div>
+  <div class="row">
+    <input id="roomId" placeholder="输入房间号，例如 1001" />
+    <button id="joinBtn">加入房间</button>
+    <button id="leaveBtn" disabled>离开</button>
+    <span class="badge" id="roleBadge">未加入</span>
+  </div>
+
+  <div class="status" id="status">状态：未连接</div>
+
+  <div class="videos">
+    <div>
+      <div>本地</div>
+      <video id="localVideo" playsinline autoplay muted></video>
+    </div>
+    <div>
+      <div>远端</div>
+      <video id="remoteVideo" playsinline autoplay></video>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const roomInput = document.getElementById("roomId");
+  const joinBtn = document.getElementById("joinBtn");
+  const leaveBtn = document.getElementById("leaveBtn");
+  const statusEl = document.getElementById("status");
+  const roleBadge = document.getElementById("roleBadge");
+  const localVideo = document.getElementById("localVideo");
+  const remoteVideo = document.getElementById("remoteVideo");
+
+  let ws = null;
+  let pc = null;
+  let localStream = null;
+  let roomId = null;
+  let isInitiator = false;
+
+  // 你的 coturn 配置（可先只用 stun 测试）
+  const rtcConfig = {
+    iceServers: [
+      // 公共 STUN（也可换成你自己的 STUN）
+      //{ urls: "stun:stun.l.google.com:19302" },
+      {urls: "stun:81.68.86.146:3478"},
+
+      // 你的 TURN（按你文档：81.68.86.146:3478，user webrtc / pwd Kx9mP2qL8rY5tZ）
+      // 强烈建议生产用 turn: 域名 + TLS(5349) + 长期凭证机制
+      { urls: "turn:81.68.86.146:3478", username: "webrtc", credential: "Kx9mP2qL8rY5tZ" }
+      // 若你开了 TLS： { urls: "turns:81.68.86.146:5349", username:"webrtc", credential:"..." }
+    ]
+  };
+
+  function setStatus(s) { statusEl.textContent = "状态：" + s; }
+  function setRole(text) { roleBadge.textContent = text; }
+
+  function wsSend(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    }
+  }
+
+  async function ensureLocalMedia() {
+    if (localStream) return localStream;
+    //获取音视频流，await同步等待异步函数getUserMedia执行的结果
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    //将localStream作为数据存储到srcObject成员中
+    localVideo.srcObject = localStream;
+    return localStream;
+  }
+  //创建和对端连接
+  async function createPeerConnection() {
+    //google提供的webrtc客户端库，当对端发送的ice被收到，出发onicecandidate信号
+    pc = new RTCPeerConnection(rtcConfig);
+
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) {
+        wsSend({ type: "ice", candidate: ev.candidate });
+      }
+    };
+
+    pc.ontrack = (ev) => {
+      // 1v1：它是远端的 MediaStream： 挂载到remoteVideo
+      if (remoteVideo.srcObject !== ev.streams[0]) {
+        remoteVideo.srcObject = ev.streams[0];
+      }
+    };
+    //监听状态改变
+    pc.onconnectionstatechange = () => {
+      setStatus("P2P连接状态：" + pc.connectionState);
+    };
+
+    const stream = await ensureLocalMedia();
+    //获取本地音频和视频的轨道，添加到pc中
+    for (const track of stream.getTracks()) {
+      pc.addTrack(track, stream);
+    }
+  }
+
+  async function startAsInitiator() {
+    // 创建 offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    wsSend({ type: "offer", sdp: pc.localDescription });
+  }
+
+  async function handleOffer(sdp) {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    wsSend({ type: "answer", sdp: pc.localDescription });
+  }
+
+  async function handleAnswer(sdp) {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  }
+
+  async function handleIce(candidate) {
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (e) {
+      console.warn("addIceCandidate failed:", e);
+    }
+  }
+
+  function cleanupPeer() {
+    if (pc) {
+      pc.onicecandidate = null;
+      pc.ontrack = null;
+      pc.close();
+      pc = null;
+    }
+    remoteVideo.srcObject = null;
+    isInitiator = false;
+    setRole("未加入");
+  }
+
+  function cleanupAll() {
+    cleanupPeer();
+    if (ws) {
+      try { ws.close(); } catch {}
+      ws = null;
+    }
+    if (localStream) {
+      for (const t of localStream.getTracks()) t.stop();
+      localStream = null;
+      localVideo.srcObject = null;
+    }
+    roomId = null;
+    joinBtn.disabled = false;
+    leaveBtn.disabled = true;
+    setStatus("未连接");
+  }
+
+  async function joinRoom() {
+    roomId = roomInput.value.trim();
+    if (!roomId) {
+      alert("请输入房间号");
+      return;
+    }
+
+    // 先拿到媒体权限，避免后面 ready 才弹权限导致流程卡住
+    try {
+      await ensureLocalMedia();
+    } catch (e) {
+      alert("获取摄像头/麦克风失败，请检查权限");
+      return;
+    }
+
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${proto}://${location.host}`;
+    ws = new WebSocket(wsUrl);
+
+    setStatus("连接信令中...");
+
+    ws.onopen = () => {
+      setStatus("信令已连接，加入房间 " + roomId);
+      wsSend({ type: "join", roomId });
+      joinBtn.disabled = true;
+      leaveBtn.disabled = false;
+    };
+
+    ws.onmessage = async (ev) => {
+      const msg = JSON.parse(ev.data);
+
+      if (msg.type === "full") {
+        alert("房间已满（当前版本限制 2 人）");
+        cleanupAll();
+        return;
+      }
+
+      if (msg.type === "joined") {
+        setStatus(`已加入房间 ${msg.roomId}，当前已有 ${msg.peers} 人`);
+        return;
+      }
+
+      if (msg.type === "ready") {
+        isInitiator = !!msg.isInitiator;
+        setRole(isInitiator ? "发起方(initiator)" : "接收方(receiver)");
+        setStatus("房间已凑齐 2 人，开始协商...");
+
+        await createPeerConnection();
+        if (isInitiator) {
+          await startAsInitiator();
+        }
+        return;
+      }
+
+      if (msg.type === "offer") {
+        if (!pc) await createPeerConnection();
+        await handleOffer(msg.sdp);
+        return;
+      }
+
+      if (msg.type === "answer") {
+        await handleAnswer(msg.sdp);
+        return;
+      }
+
+      if (msg.type === "ice") {
+        if (pc && msg.candidate) await handleIce(msg.candidate);
+        return;
+      }
+
+      if (msg.type === "peer-left") {
+        setStatus("对方已离开，等待新用户加入...");
+        cleanupPeer();
+        return;
+      }
+
+      if (msg.type === "error") {
+        console.error(msg.message);
+      }
+    };
+
+    ws.onclose = () => {
+      setStatus("信令断开");
+      cleanupPeer();
+    };
+
+    ws.onerror = () => {
+      setStatus("信令错误");
+    };
+  }
+
+  function leaveRoom() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      wsSend({ type: "leave" });
+    }
+    cleanupAll();
+  }
+
+  joinBtn.onclick = joinRoom;
+  leaveBtn.onclick = leaveRoom;
+})();
+</script>
+</body>
+</html>

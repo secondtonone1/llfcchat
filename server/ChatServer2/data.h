@@ -47,6 +47,7 @@ struct ChatMessage {
 	std::string content;
 	std::string chat_time;
 	int status;
+	int msg_type;
 };
 
 // 查询结果结构，增加next_cursor字段
@@ -54,4 +55,11 @@ struct PageResult {
 	std::vector<ChatMessage> messages;
 	bool load_more;
 	int next_cursor;  // 本页最后一条message_id，用于下次查询
+};
+
+enum class ChatMsgType {
+	TEXT = 0,
+	PIC = 1,
+	VIDEO = 2,
+	FILE = 3
 };

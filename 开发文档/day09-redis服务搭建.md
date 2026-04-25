@@ -670,6 +670,138 @@ void TestRedisMgr() {
 	RedisMgr::GetInstance()->Close();
 }
 ```
+## 封装redis连接池
+``` cpp
+class RedisConPool {
+public:
+	RedisConPool(size_t poolSize, const char* host, int port, const char* pwd)
+		: poolSize_(poolSize), host_(host), port_(port), b_stop_(false){
+		for (size_t i = 0; i < poolSize_; ++i) {
+			auto* context = redisConnect(host, port);
+			if (context == nullptr || context->err != 0) {
+				if (context != nullptr) {
+					redisFree(context);
+				}
+				continue;
+			}
+
+			auto reply = (redisReply*)redisCommand(context, "AUTH %s", pwd);
+			if (reply->type == REDIS_REPLY_ERROR) {
+				std::cout << "认证失败" << std::endl;
+				//执行成功 释放redisCommand执行后返回的redisReply所占用的内存
+				freeReplyObject(reply);
+				continue;
+			}
+
+			//执行成功 释放redisCommand执行后返回的redisReply所占用的内存
+			freeReplyObject(reply);
+			std::cout << "认证成功" << std::endl;
+			connections_.push(context);
+		}
+
+	}
+
+	~RedisConPool() {
+		std::lock_guard<std::mutex> lock(mutex_);
+		while (!connections_.empty()) {
+			connections_.pop();
+		}
+	}
+
+	redisContext* getConnection() {
+		std::unique_lock<std::mutex> lock(mutex_);
+		cond_.wait(lock, [this] { 
+			if (b_stop_) {
+				return true;
+			}
+			return !connections_.empty(); 
+			});
+		//如果停止则直接返回空指针
+		if (b_stop_) {
+			return  nullptr;
+		}
+		auto* context = connections_.front();
+		connections_.pop();
+		return context;
+	}
+
+	void returnConnection(redisContext* context) {
+		std::lock_guard<std::mutex> lock(mutex_);
+		if (b_stop_) {
+			return;
+		}
+		connections_.push(context);
+		cond_.notify_one();
+	}
+
+	void Close() {
+		b_stop_ = true;
+		cond_.notify_all();
+	}
+
+private:
+	atomic<bool> b_stop_;
+	size_t poolSize_;
+	const char* host_;
+	int port_;
+	std::queue<redisContext*> connections_;
+	std::mutex mutex_;
+	std::condition_variable cond_;
+};
+```
+
+RedisMgr构造函数中初始化pool连接池
+``` cpp
+RedisMgr::RedisMgr() {
+	auto& gCfgMgr = ConfigMgr::Inst();
+	auto host = gCfgMgr["Redis"]["Host"];
+	auto port = gCfgMgr["Redis"]["Port"];
+	auto pwd = gCfgMgr["Redis"]["Passwd"];
+	_con_pool.reset(new RedisConPool(5, host.c_str(), atoi(port.c_str()), pwd.c_str()));
+}
+```
+在析构函数中回收资源
+``` cpp
+RedisMgr::~RedisMgr() {
+	Close();
+}
+
+void RedisMgr::Close() {
+	_con_pool->Close();
+}
+```
+
+在使用的时候改为从Pool中获取链接
+``` cpp
+bool RedisMgr::Get(const std::string& key, std::string& value)
+{
+	auto connect = _con_pool->getConnection();
+	if (connect == nullptr) {
+		return false;
+	}
+	 auto reply = (redisReply*)redisCommand(connect, "GET %s", key.c_str());
+	 if (reply == NULL) {
+		 std::cout << "[ GET  " << key << " ] failed" << std::endl;
+		 freeReplyObject(reply);
+		 _con_pool->returnConnection(connect);
+		  return false;
+	}
+
+	 if (reply->type != REDIS_REPLY_STRING) {
+		 std::cout << "[ GET  " << key << " ] failed" << std::endl;
+		 freeReplyObject(reply);
+		 _con_pool->returnConnection(connect);
+		 return false;
+	}
+
+	 value = reply->str;
+	 freeReplyObject(reply);
+
+	 std::cout << "Succeed to execute command [ GET " << key << "  ]" << std::endl;
+	 _con_pool->returnConnection(connect);
+	 return true;
+}
+```
 ## 总结
 
 本节告诉大家如何搭建redis服务，linux和windows环境的，并且编译了windows版本的hredis库，解决了链接错误，而且封装了RedisMgr管理类。

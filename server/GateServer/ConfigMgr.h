@@ -22,10 +22,19 @@ struct SectionInfo {
 		}
 
 		this->_section_datas = src._section_datas;
+		return *this;
 	}
 
 	std::map<std::string, std::string> _section_datas;
 	std::string  operator[](const std::string  &key) {
+		if (_section_datas.find(key) == _section_datas.end()) {
+			return "";
+		}
+		// 这里可以添加一些边界检查  
+		return _section_datas[key];
+	}
+
+	std::string GetValue(const std::string & key) {
 		if (_section_datas.find(key) == _section_datas.end()) {
 			return "";
 		}
@@ -60,9 +69,14 @@ public:
 		this->_config_map = src._config_map;
 	}
 
-	ConfigMgr();
+	static ConfigMgr& Inst() {
+		static ConfigMgr cfg_mgr;
+		return cfg_mgr;
+	}
+
+	std::string GetValue(const std::string& section, const std::string & key);
 private:
-	
+	ConfigMgr();
 	// 存储section和key-value对的map  
 	std::map<std::string, SectionInfo> _config_map;
 };

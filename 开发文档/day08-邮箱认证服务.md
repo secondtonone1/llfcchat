@@ -224,6 +224,216 @@ main()
 ```
 GetVarifyCode声明为async是为了能在内部调用await。
 
+## 提升GateServer并发
+添加ASIO IOContext Pool 结构，让多个iocontext跑在不同的线程中
+``` cpp
+#include <vector>
+#include <boost/asio.hpp>
+#include "Singleton.h"
+class AsioIOServicePool:public Singleton<AsioIOServicePool>
+{
+	friend Singleton<AsioIOServicePool>;
+public:
+	using IOService = boost::asio::io_context;
+	using Work = boost::asio::io_context::work;
+	using WorkPtr = std::unique_ptr<Work>;
+	~AsioIOServicePool();
+	AsioIOServicePool(const AsioIOServicePool&) = delete;
+	AsioIOServicePool& operator=(const AsioIOServicePool&) = delete;
+	// 使用 round-robin 的方式返回一个 io_service
+	boost::asio::io_context& GetIOService();
+	void Stop();
+private:
+	AsioIOServicePool(std::size_t size = 2/*std::thread::hardware_concurrency()*/);
+	std::vector<IOService> _ioServices;
+	std::vector<WorkPtr> _works;
+	std::vector<std::thread> _threads;
+	std::size_t                        _nextIOService;
+};
+```
+实现
+``` cpp
+#include "AsioIOServicePool.h"
+#include <iostream>
+using namespace std;
+AsioIOServicePool::AsioIOServicePool(std::size_t size):_ioServices(size),
+_works(size), _nextIOService(0){
+	for (std::size_t i = 0; i < size; ++i) {
+		_works[i] = std::unique_ptr<Work>(new Work(_ioServices[i]));
+	}
+
+	//遍历多个ioservice，创建多个线程，每个线程内部启动ioservice
+	for (std::size_t i = 0; i < _ioServices.size(); ++i) {
+		_threads.emplace_back([this, i]() {
+			_ioServices[i].run();
+			});
+	}
+}
+
+AsioIOServicePool::~AsioIOServicePool() {
+	Stop();
+	std::cout << "AsioIOServicePool destruct" << endl;
+}
+
+boost::asio::io_context& AsioIOServicePool::GetIOService() {
+	auto& service = _ioServices[_nextIOService++];
+	if (_nextIOService == _ioServices.size()) {
+		_nextIOService = 0;
+	}
+	return service;
+}
+
+void AsioIOServicePool::Stop(){
+	//因为仅仅执行work.reset并不能让iocontext从run的状态中退出
+	//当iocontext已经绑定了读或写的监听事件后，还需要手动stop该服务。
+	for (auto& work : _works) {
+		//把服务先停止
+		work->get_io_context().stop();
+		work.reset();
+	}
+
+	for (auto& t : _threads) {
+		t.join();
+	}
+}
+```
+
+修改CServer处Start逻辑, 改为每次从IOServicePool连接池中获取连接
+``` cpp
+void CServer::Start()
+{	
+	auto self = shared_from_this();
+	auto& io_context = AsioIOServicePool::GetInstance()->GetIOService();
+	std::shared_ptr<HttpConnection> new_con = std::make_shared<HttpConnection>(io_context);
+	_acceptor.async_accept(new_con->GetSocket(), [self, new_con](beast::error_code ec) {
+		try {
+			//出错则放弃这个连接，继续监听新链接
+			if (ec) {
+				self->Start();
+				return;
+			}
+
+			//处理新链接，创建HpptConnection类管理新连接
+			new_con->Start();
+			//继续监听
+			self->Start();
+		}
+		catch (std::exception& exp) {
+			std::cout << "exception is " << exp.what() << std::endl;
+			self->Start();
+		}
+	});
+}
+```
+
+为了方便读取配置文件，将ConfigMgr改为单例, 将构造函数变成私有，添加Inst函数
+``` cpp
+static ConfigMgr& Inst() {
+    static ConfigMgr cfg_mgr;
+    return cfg_mgr;
+}
+```
+
+VerifyGrpcClient.cpp中添加
+``` cpp
+class RPConPool {
+public:
+	RPConPool(size_t poolSize, std::string host, std::string port)
+		: poolSize_(poolSize), host_(host), port_(port), b_stop_(false) {
+		for (size_t i = 0; i < poolSize_; ++i) {
+			
+			std::shared_ptr<Channel> channel = grpc::CreateChannel(host+":"+port,
+				grpc::InsecureChannelCredentials());
+
+			connections_.push(VarifyService::NewStub(channel));
+		}
+	}
+
+	~RPConPool() {
+		std::lock_guard<std::mutex> lock(mutex_);
+		Close();
+		while (!connections_.empty()) {
+			connections_.pop();
+		}
+	}
+
+	std::unique_ptr<VarifyService::Stub> getConnection() {
+		std::unique_lock<std::mutex> lock(mutex_);
+		cond_.wait(lock, [this] {
+			if (b_stop_) {
+				return true;
+			}
+			return !connections_.empty();
+			});
+		//如果停止则直接返回空指针
+		if (b_stop_) {
+			return  nullptr;
+		}
+		auto context = std::move(connections_.front());
+		connections_.pop();
+		return context;
+	}
+
+	void returnConnection(std::unique_ptr<VarifyService::Stub> context) {
+		std::lock_guard<std::mutex> lock(mutex_);
+		if (b_stop_) {
+			return;
+		}
+		connections_.push(std::move(context));
+		cond_.notify_one();
+	}
+
+	void Close() {
+		b_stop_ = true;
+		cond_.notify_all();
+	}
+
+private:
+	atomic<bool> b_stop_;
+	size_t poolSize_;
+	std::string host_;
+	std::string port_;
+	std::queue<std::unique_ptr<VarifyService::Stub>> connections_;
+	std::mutex mutex_;
+	std::condition_variable cond_;
+};
+```
+我们在VerifyGrpcClient类中添加成员
+``` cpp
+std::unique_ptr<RPConPool> pool_;
+```
+修改构造函数
+``` cpp
+VerifyGrpcClient::VerifyGrpcClient() {
+	auto& gCfgMgr = ConfigMgr::Inst();
+	std::string host = gCfgMgr["VarifyServer"]["Host"];
+	std::string port = gCfgMgr["VarifyServer"]["Port"];
+	pool_.reset(new RPConPool(5, host, port));
+}
+```
+
+当我们想连接grpc server端时，可以通过池子获取连接，用完之后再返回连接给池子
+``` cpp
+GetVarifyRsp GetVarifyCode(std::string email) {
+    ClientContext context;
+    GetVarifyRsp reply;
+    GetVarifyReq request;
+    request.set_email(email);
+    auto stub = pool_->getConnection();
+    Status status = stub->GetVarifyCode(&context, request, &reply);
+
+    if (status.ok()) {
+        pool_->returnConnection(std::move(stub));
+        return reply;
+    }
+    else {
+        pool_->returnConnection(std::move(stub));
+        reply.set_error(ErrorCodes::RPCFailed);
+        return reply;
+    }
+}
+```
+
 ## 总结
 到本节为止我们完成nodejs搭建的grpc server， 修改package.json中的脚本
 

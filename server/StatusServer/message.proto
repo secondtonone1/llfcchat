@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package message;
+
+service VarifyService {
+  rpc GetVarifyCode (GetVarifyReq) returns (GetVarifyRsp) {}
+}
+
+message GetVarifyReq {
+  string email = 1;
+}
+
+message GetVarifyRsp {
+  int32 error = 1;
+  string email = 2;
+  string code = 3;
+}
+
+message GetChatServerReq {
+  int32 uid = 1;
+}
+
+message GetChatServerRsp {
+  int32 error = 1;
+  string host = 2;
+  string port = 3;
+  string token = 4;
+}
+
+message LoginReq{
+	int32 uid = 1;
+	string token= 2;
+}
+
+message LoginRsp {
+	int32 error = 1;
+	int32 uid = 2;
+	string token = 3;
+}
+
+service StatusService {
+	rpc GetChatServer (GetChatServerReq) returns (GetChatServerRsp) {}
+	rpc Login(LoginReq) returns(LoginRsp);
+}
+
+message AddFriendReq {
+	int32  applyuid = 1;
+	string name = 2;
+	string desc = 3;
+	int32  touid = 4;
+}
+
+message AddFriendRsp {
+	int32 error = 1;
+	int32 applyuid = 2;
+	int32 touid = 3;
+}
+
+message RplyFriendReq {
+	int32 rplyuid = 1;
+	bool  agree = 2;
+	int32 touid = 3;
+}
+
+message RplyFriendRsp {
+	int32 error = 1;
+	int32 rplyuid = 2;
+	int32 touid = 3;
+}
+
+message SendChatMsgReq{
+		int32 fromuid = 1;
+		int32 touid = 2;
+		string message = 3;
+}
+
+message SendChatMsgRsp{
+		int32 error = 1;
+		int32 fromuid = 2;
+		int32 touid = 3;
+}
+
+message AuthFriendReq{
+	int32 fromuid = 1;
+	int32 touid = 2;
+}
+
+message AuthFriendRsp{
+	int32 error = 1;
+	int32 fromuid = 2;
+	int32 touid = 3;
+}
+
+message TextChatMsgReq {
+	int32 fromuid = 1;
+    int32 touid = 2;
+	repeated TextChatData textmsgs = 3;
+}
+
+message TextChatData{
+	string msgid = 1;
+	string msgcontent = 2;
+}
+
+message TextChatMsgRsp {
+	int32 error = 1;
+	int32 fromuid = 2;
+	int32 touid = 3; 
+	repeated TextChatData textmsgs = 4;
+}
+
+service ChatService {
+	rpc NotifyAddFriend(AddFriendReq) returns (AddFriendRsp) {}
+	rpc RplyAddFriend(RplyFriendReq) returns (RplyFriendRsp) {}
+	rpc SendChatMsg(SendChatMsgReq) returns (SendChatMsgRsp) {}
+	rpc NotifyAuthFriend(AuthFriendReq) returns (AuthFriendRsp) {}
+	rpc NotifyTextChatMsg(TextChatMsgReq) returns (TextChatMsgRsp){}
+}

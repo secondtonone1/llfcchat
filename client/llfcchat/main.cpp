@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QFile>
 #include "global.h"
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -33,6 +34,5 @@ int main(int argc, char *argv[])
 
     MainWindow w;
     w.show();
-
     return a.exec();
 }
